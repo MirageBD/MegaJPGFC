@@ -30,7 +30,7 @@ jpg_rendinit
 		sta $d070
 
 		ldx #$00										; set bitmap palette
-:		txa
+:		lda #$00
 		sta $d100,x
 		sta $d200,x
 		sta $d300,x
@@ -43,7 +43,7 @@ jpg_rendinit
 		sta $d070
 
 		ldx #$00										; set bitmap palette
-:		txa
+:		lda #$00
 		sta $d100,x
 		sta $d200,x
 		sta $d300,x
@@ -299,7 +299,7 @@ jpgrend_getrgb
 		ldx #$00
 		ldz #$00
 jpgrnd_red
-:		lda $babe,x
+:		lda $babe,x										; copy 256 red colours
 		jsr reversenibble
 		sta [uidraw_scrptr],z
 		inx
@@ -370,6 +370,88 @@ jpgrnd_blue
 		lda uidraw_scrptr+2
 		adc #$00
 		sta uidraw_scrptr+2
+
+
+
+
+
+		ldx #$00
+		ldz #$00
+jpgrnd_redright
+:		lda $babe,x										; copy 64 red colours
+		jsr reversenibble
+		sta [uidraw_scrptr],z
+		inx
+		inz
+		cpz #64
+		bne :-
+
+		clc
+		lda uidraw_scrptr+0
+		adc #$40
+		sta uidraw_scrptr+0
+		lda uidraw_scrptr+1
+		adc #$00
+		sta uidraw_scrptr+1
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+
+		ldx #$00
+		ldz #$00
+jpgrnd_greenright
+:		lda $babe,x										; copy 64 red colours
+		jsr reversenibble
+		sta [uidraw_scrptr],z
+		inx
+		inz
+		cpz #64
+		bne :-
+
+		clc
+		lda uidraw_scrptr+0
+		adc #$40
+		sta uidraw_scrptr+0
+		lda uidraw_scrptr+1
+		adc #$00
+		sta uidraw_scrptr+1
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+
+		ldx #$00
+		ldz #$00
+jpgrnd_blueright
+:		lda $babe,x										; copy 64 red colours
+		jsr reversenibble
+		sta [uidraw_scrptr],z
+		inx
+		inz
+		cpz #64
+		bne :-
+
+		clc
+		lda uidraw_scrptr+0
+		adc #$40
+		sta uidraw_scrptr+0
+		lda uidraw_scrptr+1
+		adc #$00
+		sta uidraw_scrptr+1
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2		
+
+
+
 
 		clc
 		lda jpgrnd_red+1
@@ -591,24 +673,31 @@ jpg_render_irq
 		lda #2
 		sta jpgruc3
 
-		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
-		and #%00111111
-		sta $d070
-
 		lda #$00
 		sta $d020
 
 		ldx #$00
-:		DMA_RUN_JOB jpgrender_updatecolours
+jpg_render_irq_loop		
+		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
+		and #%00111111
+		sta $d070
+		DMA_RUN_JOB jpgrender_updatecolours
+		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
+		and #%00111111
+		ora #%10000000
+		sta $d070
+		DMA_RUN_JOB jpgrender_updatecolours2red
+		DMA_RUN_JOB jpgrender_updatecolours2green
+		DMA_RUN_JOB jpgrender_updatecolours2blue
 		clc
-		;lda jpgruc2+0									; add 3*256 to DMA copy
-		;adc #0
-		;sta jpgruc2+0
+		lda jpgruc2+0									; add 3*256 to DMA copy
+		adc #$c0
+		sta jpgruc2+0
 		lda jpgruc2+1
-		adc #3
+		adc #$03
 		sta jpgruc2+1
 		lda jpgruc3+0
-		adc #0
+		adc #$00
 		sta jpgruc3+0
 
 		lda $d012
@@ -619,8 +708,10 @@ jpg_render_irq
 
 		inx
 		cpx #200
-		bne :--
+		beq :+
+		jmp jpg_render_irq_loop
 
+:
 		; shouldn't have to do this and just leave the bitmap palette banked in?
 		;lda $d070
 		;and #%11001111									; clear bits 4 and 5 (BTPALSEL) so bitmap uses palette 0
@@ -799,6 +890,108 @@ jpgruc3
 
 		.word $d100 & $ffff
 		.byte (($d100 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+
+		.word $0000
+
+		; $0300*200 = $25800
+
+; ----------------------------------------------------------------------------------------------------------------------------------------
+
+jpgrender_updatecolours2red
+
+		;DMA_HEADER $20000 >> 20, $30000 >> 20
+		; f018a = 11 bytes, f018b is 12 bytes
+		.byte $0a ; Request format is F018A
+jpgruc2r1
+		.byte $80, ($20000 >> 20) ; sourcebank
+		.byte $81, ($d100 >> 20) ; destbank
+
+		.byte $82, 0 ; Source skip rate (256ths of bytes)
+		.byte $83, 1 ; Source skip rate (whole bytes)
+
+		.byte $84, 0 ; Destination skip rate (256ths of bytes)
+		.byte $85, 1 ; Destination skip rate (whole bytes)
+
+		.byte $00 ; No more options
+
+		.byte $00 ; Copy and last request
+		.word 64 ; Size of Copy
+
+jpgruc2r2
+		.word $0000										; $20000 & $ffff
+jpgruc2r3
+		.byte 2											; ($20000 >> 16)
+
+		.word $d100 & $ffff
+		.byte (($d100 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+
+		.word $0000
+
+		; $0300*200 = $25800
+
+; ----------------------------------------------------------------------------------------------------------------------------------------
+
+jpgrender_updatecolours2green
+
+		;DMA_HEADER $20000 >> 20, $30000 >> 20
+		; f018a = 11 bytes, f018b is 12 bytes
+		.byte $0a ; Request format is F018A
+jpgruc2g1
+		.byte $80, ($20000 >> 20) ; sourcebank
+		.byte $81, ($d200 >> 20) ; destbank
+
+		.byte $82, 0 ; Source skip rate (256ths of bytes)
+		.byte $83, 1 ; Source skip rate (whole bytes)
+
+		.byte $84, 0 ; Destination skip rate (256ths of bytes)
+		.byte $85, 1 ; Destination skip rate (whole bytes)
+
+		.byte $00 ; No more options
+
+		.byte $00 ; Copy and last request
+		.word 64 ; Size of Copy
+
+jpgruc2g2
+		.word $0100										; $20000 & $ffff
+jpgruc2g3
+		.byte 2											; ($20000 >> 16)
+
+		.word $d200 & $ffff
+		.byte (($d200 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+
+		.word $0000
+
+		; $0300*200 = $25800
+
+; ----------------------------------------------------------------------------------------------------------------------------------------
+
+jpgrender_updatecolours2blue
+
+		;DMA_HEADER $20000 >> 20, $30000 >> 20
+		; f018a = 11 bytes, f018b is 12 bytes
+		.byte $0a ; Request format is F018A
+jpgruc2b1
+		.byte $80, ($20000 >> 20) ; sourcebank
+		.byte $81, ($d300 >> 20) ; destbank
+
+		.byte $82, 0 ; Source skip rate (256ths of bytes)
+		.byte $83, 1 ; Source skip rate (whole bytes)
+
+		.byte $84, 0 ; Destination skip rate (256ths of bytes)
+		.byte $85, 1 ; Destination skip rate (whole bytes)
+
+		.byte $00 ; No more options
+
+		.byte $00 ; Copy and last request
+		.word 64 ; Size of Copy
+
+jpgruc2b2
+		.word $0200										; $20000 & $ffff
+jpgruc2b3
+		.byte 2											; ($20000 >> 16)
+
+		.word $d300 & $ffff
+		.byte (($d300 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
 
 		.word $0000
 
