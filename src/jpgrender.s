@@ -216,6 +216,10 @@ endscreenplot
 		lda #$00
 		sta $d016
 
+		lda #$50		; set TEXTXPOS to same as SDBDRWDLSB
+		lda $d04c
+		sta $d05c
+
 		lda #$01
 		sta $d05b										; Set display to V200
 		lda #25
@@ -279,18 +283,28 @@ jpg_rend_column		.byte 0
 jpg_render
 
 		sta jpgrnd_red+1
+		sta jpgrnd_redright+1
 		sta jpgrnd_green+1
+		sta jpgrnd_greenright+1
 		sta jpgrnd_blue+1
+		sta jpgrnd_blueright+1
 		tya
 		clc
-		adc #>(0*jpg_channelbufsize)
+		adc #>(0*jpg_channelbufsize)					; $8400 + 0 * $1400
 		sta jpgrnd_red+2
+		sta jpgrnd_redright+2
 		clc
-		adc #>(1*jpg_channelbufsize)
+		adc #>(1*jpg_channelbufsize)					; $8400 + 1 * $1400
 		sta jpgrnd_green+2
+		sta jpgrnd_greenright+2
 		clc
-		adc #>(1*jpg_channelbufsize)
+		adc #>(1*jpg_channelbufsize)					; $8400 + 2 * $1400
 		sta jpgrnd_blue+2
+		sta jpgrnd_blueright+2
+
+		inc jpgrnd_redright+2
+		inc jpgrnd_greenright+2
+		inc jpgrnd_blueright+2
 
 		ldy #$00
 
@@ -403,7 +417,7 @@ jpgrnd_redright
 		ldx #$00
 		ldz #$00
 jpgrnd_greenright
-:		lda $babe,x										; copy 64 red colours
+:		lda $babe,x										; copy 64 green colours
 		jsr reversenibble
 		sta [uidraw_scrptr],z
 		inx
@@ -428,7 +442,7 @@ jpgrnd_greenright
 		ldx #$00
 		ldz #$00
 jpgrnd_blueright
-:		lda $babe,x										; copy 64 red colours
+:		lda $babe,x										; copy 64 blue colours
 		jsr reversenibble
 		sta [uidraw_scrptr],z
 		inx
@@ -476,6 +490,30 @@ jpgrnd_blueright
 		lda jpgrnd_blue+2
 		adc #>(jpg_bufwidth*8)
 		sta jpgrnd_blue+2
+
+		clc
+		lda jpgrnd_redright+1
+		adc #<(jpg_bufwidth*8)
+		sta jpgrnd_redright+1
+		lda jpgrnd_redright+2
+		adc #>(jpg_bufwidth*8)
+		sta jpgrnd_redright+2
+
+		clc
+		lda jpgrnd_greenright+1
+		adc #<(jpg_bufwidth*8)
+		sta jpgrnd_greenright+1
+		lda jpgrnd_greenright+2
+		adc #>(jpg_bufwidth*8)
+		sta jpgrnd_greenright+2
+
+		clc
+		lda jpgrnd_blueright+1
+		adc #<(jpg_bufwidth*8)
+		sta jpgrnd_blueright+1
+		lda jpgrnd_blueright+2
+		adc #>(jpg_bufwidth*8)
+		sta jpgrnd_blueright+2
 
 		iny
 		cpy #8
@@ -669,9 +707,28 @@ jpg_render_irq
 
 		lda #0											; set up DMA copy to start at $20000
 		sta jpgruc2+0
+		lda #0
 		sta jpgruc2+1
 		lda #2
 		sta jpgruc3
+		sta jpgruc2r3
+		sta jpgruc2g3
+		sta jpgruc2b3
+
+		lda #<$0300
+		sta jpgruc2r2+0
+		lda #>$0300
+		sta jpgruc2r2+1
+
+		lda #<$0340
+		sta jpgruc2g2+0
+		lda #>$0340
+		sta jpgruc2g2+1
+
+		lda #<$0380
+		sta jpgruc2b2+0
+		lda #>$0380
+		sta jpgruc2b2+1
 
 		lda #$00
 		sta $d020
@@ -689,8 +746,9 @@ jpg_render_irq_loop
 		DMA_RUN_JOB jpgrender_updatecolours2red
 		DMA_RUN_JOB jpgrender_updatecolours2green
 		DMA_RUN_JOB jpgrender_updatecolours2blue
+
 		clc
-		lda jpgruc2+0									; add 3*256 to DMA copy
+		lda jpgruc2+0									; add 3*320 to DMA copy
 		adc #$c0
 		sta jpgruc2+0
 		lda jpgruc2+1
@@ -699,6 +757,39 @@ jpg_render_irq_loop
 		lda jpgruc3+0
 		adc #$00
 		sta jpgruc3+0
+
+		clc
+		lda jpgruc2r2+0									; add 3*320 to DMA copy
+		adc #$c0
+		sta jpgruc2r2+0
+		lda jpgruc2r2+1
+		adc #$03
+		sta jpgruc2r2+1
+		lda jpgruc2r3+0
+		adc #$00
+		sta jpgruc2r3+0
+
+		clc
+		lda jpgruc2g2+0									; add 3*320 to DMA copy
+		adc #$c0
+		sta jpgruc2g2+0
+		lda jpgruc2g2+1
+		adc #$03
+		sta jpgruc2g2+1
+		lda jpgruc2g3+0
+		adc #$00
+		sta jpgruc2g3+0
+
+		clc
+		lda jpgruc2b2+0									; add 3*320 to DMA copy
+		adc #$c0
+		sta jpgruc2b2+0
+		lda jpgruc2b2+1
+		adc #$03
+		sta jpgruc2b2+1
+		lda jpgruc2b3+0
+		adc #$00
+		sta jpgruc2b3+0
 
 		lda $d012
 		clc
@@ -868,7 +959,6 @@ jpgrender_updatecolours
 		;DMA_HEADER $20000 >> 20, $30000 >> 20
 		; f018a = 11 bytes, f018b is 12 bytes
 		.byte $0a ; Request format is F018A
-jpgruc1
 		.byte $80, ($20000 >> 20) ; sourcebank
 		.byte $81, ($d100 >> 20) ; destbank
 
@@ -902,7 +992,6 @@ jpgrender_updatecolours2red
 		;DMA_HEADER $20000 >> 20, $30000 >> 20
 		; f018a = 11 bytes, f018b is 12 bytes
 		.byte $0a ; Request format is F018A
-jpgruc2r1
 		.byte $80, ($20000 >> 20) ; sourcebank
 		.byte $81, ($d100 >> 20) ; destbank
 
@@ -936,7 +1025,6 @@ jpgrender_updatecolours2green
 		;DMA_HEADER $20000 >> 20, $30000 >> 20
 		; f018a = 11 bytes, f018b is 12 bytes
 		.byte $0a ; Request format is F018A
-jpgruc2g1
 		.byte $80, ($20000 >> 20) ; sourcebank
 		.byte $81, ($d200 >> 20) ; destbank
 
@@ -970,7 +1058,6 @@ jpgrender_updatecolours2blue
 		;DMA_HEADER $20000 >> 20, $30000 >> 20
 		; f018a = 11 bytes, f018b is 12 bytes
 		.byte $0a ; Request format is F018A
-jpgruc2b1
 		.byte $80, ($20000 >> 20) ; sourcebank
 		.byte $81, ($d300 >> 20) ; destbank
 
