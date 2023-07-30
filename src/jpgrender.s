@@ -503,6 +503,52 @@ jpgrnd_blueright
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
+jpg_load_irq
+
+		php
+		pha
+		phx
+		phy
+		phz
+
+		ldx #$00
+:		inc $d020
+		inx
+		bne :-
+
+		jsr mouse_update
+		jsr keyboard_update
+
+		lda main_event
+		cmp #$02
+		beq set_jpg_render_irq
+
+		lda #$33
+		sta $d012
+
+		plz
+		ply
+		plx
+		pla
+		plp
+		asl $d019
+		rti
+
+set_jpg_render_irq
+		lda #<jpg_render_irq
+		sta $fffe
+		lda #>jpg_render_irq
+		sta $ffff
+		plz
+		ply
+		plx
+		pla
+		plp
+		asl $d019
+		rti
+
+; ----------------------------------------------------------------------------------------------------------------------------------------
+
 jpg_render_irq
 
 		php
@@ -650,11 +696,6 @@ jpg_render_irq_loop
 		jmp jpg_render_irq_loop
 
 :
-		; shouldn't have to do this and just leave the bitmap palette banked in?
-		;lda $d070
-		;and #%11001111									; clear bits 4 and 5 (BTPALSEL) so bitmap uses palette 0
-		;sta $d070
-
 		lda #$80
 		sta $d020
 
@@ -664,14 +705,15 @@ jpg_render_irq_loop
 		lda mouse_released
 		beq :+
 
-		lda #$02
+		lda #$03										; trigger main restart event
 		sta main_event
 		bra :++
 
-:		lda keyboard_shouldsendreleaseevent
+:
+		lda keyboard_shouldsendreleaseevent
 		beq :+
 
-		lda #$02
+		lda #$03
 		sta main_event
 
 :		

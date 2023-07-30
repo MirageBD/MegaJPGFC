@@ -208,7 +208,7 @@ loop
 		lda main_event
 		cmp #$01
 		beq load_image
-		cmp #$02
+		cmp #$03
 		beq main_restart
 		jmp loop
 
@@ -220,7 +220,7 @@ load_image
 
 		jsr sdc_closefile
 
-		lda #0
+		lda #2
 		sta main_event
 		jmp loop
 
@@ -247,26 +247,16 @@ irq1
 		sta $d012
 
 		lda main_event
-		beq :+
+		cmp #$01
+		beq set_jpg_load_irq
+		bra continueirq
 
-		lda #<jpg_render_irq
+set_jpg_load_irq
+		lda #<jpg_load_irq
 		sta $fffe
-		lda #>jpg_render_irq
+		lda #>jpg_load_irq
 		sta $ffff
-		bra :++
-
-:		lda #<irq1
-		sta $fffe
-		lda #>irq1
-		sta $ffff
-		;lda #$97
-		;sta $d012
-		;lda #<irq2
-		;sta $fffe
-		;lda #>irq2
-		;sta $ffff
-
-:		plz
+		plz
 		ply
 		plx
 		pla
@@ -274,20 +264,11 @@ irq1
 		asl $d019
 		rti
 
-irq2
-		php
-		pha
-		phx
-		phy
-		phz
-
-		lda #$01
-		sta $d012
+continueirq
 		lda #<irq1
 		sta $fffe
 		lda #>irq1
 		sta $ffff
-
 		plz
 		ply
 		plx
