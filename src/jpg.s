@@ -2161,37 +2161,6 @@ jpg_desample_expand
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpg_desample_bayer
-
-		ldx #0
-
-:		ldy #0
-:		lda jpg_trans,x
-
-		sta $d770
-		lda jpg_bayer_matrix,x
-		sta $d774
-		lda $d778+1
-
-		sta (jpg_dest),y
-		iny
-		inx
-		cpy #8
-		bne :-
-
-		clc											; next scanline
-		lda jpg_dest+0
-		adc jpg_linelen+0
-		sta jpg_dest+0
-		lda jpg_dest+1
-		adc jpg_linelen+1
-		sta jpg_dest+1
-
-		cpx #64
-		bne :--
-
-		rts
-
 /*
 
 ; FOR DEBUG PURPOSES
@@ -2365,7 +2334,6 @@ jpg_fetch											; fetch the data
 		lda jpg_curcomp
 		cmp #1
 		bne :+
-		;jmp jpg_desample_bayer						; add bayer pattern to Y/luma component layer
 :		jmp jpg_desample
 
 :		rts

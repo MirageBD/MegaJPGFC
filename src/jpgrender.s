@@ -1,21 +1,16 @@
 screencolumn	.byte 0
 screenrow		.byte 0
 
-reversenibble_tmp	.byte 0
-reversenibble_tmp2	.byte 0
-
 jpg_fcblock
 		.repeat 8
 			.byte 0, 1, 2, 3, 4, 5, 6, 7
 		.endrepeat
 
-jpg_rend_foo
-		.repeat 42
-			.byte 0, 51, 102, 153, 204, 255
-		.endrepeat
-
 jpg_misccounter
 		.byte 0
+
+jpg_rowchars
+		.byte 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,1,2,3,4,5,6,7,8,9,10
 
 jpg_rendinit
 
@@ -77,9 +72,9 @@ jpg_rendinit
 		lda #0
 		sta jpg_misccounter
 
-jpg_fillscreenright
+jpg_fillsetaltpalbits
 
-		ldz #32*2
+		ldz #30*2
 		lda #%01101111
 :		sta [uidraw_colptr],z
 		inz
@@ -104,7 +99,7 @@ jpg_fillscreenright
 		inc jpg_misccounter
 		lda jpg_misccounter
 		cmp #25
-		bne jpg_fillscreenright
+		bne jpg_fillsetaltpalbits
 
 
 		; fill full colour char pattern ($f000)
@@ -138,7 +133,7 @@ jpgri1	sta jpgchars,x
 		tay
 		inc jpg_misccounter
 		lda jpg_misccounter
-		cmp #40
+		cmp #42
 		bne :-
 
 		; fill screen ($e000)
@@ -156,11 +151,18 @@ jpgri1	sta jpgchars,x
 		lda #>(screen+1)
 		sta put1+2
 
-		ldx #<(jpgchars/64)								; char to plot
-		ldy #>(jpgchars/64)
+		; jpgchars = $f000
+		; jpgchars/64 = $0800
 
-put0	stx screen+0									; plot left of 2 chars
-put1	sty screen+1									; plot right of 2 chars
+putstart
+		ldx screencolumn
+		clc
+		lda jpg_rowchars,x								; char to plot
+		adc #<(jpgchars/64)
+put0	sta screen+0									; plot left of 2 chars
+
+		lda #>(jpgchars/64)
+put1	sta screen+1									; plot right of 2 chars
 
 		clc												; add 2 to screenpos low
 		lda put0+1
@@ -178,21 +180,10 @@ put1	sty screen+1									; plot right of 2 chars
 		adc #0
 		sta put1+2
 
-		clc												; add 1 to char to plot
-		txa
-		adc #$01
-		tax
-		tya
-		adc #$00
-		tay
-
 		inc screencolumn								; increase screen column until 40
 		lda screencolumn
 		cmp #jpg_bufwidth
-		bne put0
-
-		ldx #<(jpgchars/64)								; char to plot
-		ldy #>(jpgchars/64)
+		bne putstart
 
 		lda #0											; reset screencolumn to 0, increase row until 25
 		sta screencolumn
@@ -201,7 +192,7 @@ put1	sty screen+1									; plot right of 2 chars
 		cmp #25
 		beq endscreenplot
 
-		jmp put0
+		jmp putstart
 
 endscreenplot
 
@@ -273,13 +264,6 @@ highnibble
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-
-jpg_rend_red		.byte 0
-jpg_rend_green		.byte 0
-jpg_rend_blue		.byte 0
-
-jpg_rend_column		.byte 0
-
 jpg_render
 
 		sta jpgrnd_red+1
@@ -337,60 +321,6 @@ jpgrnd_red
 
 		ldx #$00
 		ldz #$00
-jpgrnd_green
-:		lda $babe,x
-		jsr reversenibble
-		sta [uidraw_scrptr],z
-		inx
-		inz
-		cpz #$00
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$00
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$01
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-		ldx #$00
-		ldz #$00
-jpgrnd_blue
-:		lda $babe,x
-		jsr reversenibble
-		sta [uidraw_scrptr],z
-		inx
-		inz
-		cpz #$00
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$00
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$01
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-
-
-
-
-		ldx #$00
-		ldz #$00
 jpgrnd_redright
 :		lda $babe,x										; copy 64 red colours
 		jsr reversenibble
@@ -406,6 +336,31 @@ jpgrnd_redright
 		sta uidraw_scrptr+0
 		lda uidraw_scrptr+1
 		adc #$00
+		sta uidraw_scrptr+1
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+
+		ldx #$00
+		ldz #$00
+jpgrnd_green
+:		lda $babe,x
+		jsr reversenibble
+		sta [uidraw_scrptr],z
+		inx
+		inz
+		cpz #$00
+		bne :-
+
+		clc
+		lda uidraw_scrptr+0
+		adc #$00
+		sta uidraw_scrptr+0
+		lda uidraw_scrptr+1
+		adc #$01
 		sta uidraw_scrptr+1
 		lda uidraw_scrptr+2
 		adc #$00
@@ -441,6 +396,31 @@ jpgrnd_greenright
 
 		ldx #$00
 		ldz #$00
+jpgrnd_blue
+:		lda $babe,x
+		jsr reversenibble
+		sta [uidraw_scrptr],z
+		inx
+		inz
+		cpz #$00
+		bne :-
+
+		clc
+		lda uidraw_scrptr+0
+		adc #$00
+		sta uidraw_scrptr+0
+		lda uidraw_scrptr+1
+		adc #$01
+		sta uidraw_scrptr+1
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+		lda uidraw_scrptr+2
+		adc #$00
+		sta uidraw_scrptr+2
+
+		ldx #$00
+		ldz #$00
 jpgrnd_blueright
 :		lda $babe,x										; copy 64 blue colours
 		jsr reversenibble
@@ -462,9 +442,7 @@ jpgrnd_blueright
 		sta uidraw_scrptr+2
 		lda uidraw_scrptr+2
 		adc #$00
-		sta uidraw_scrptr+2		
-
-
+		sta uidraw_scrptr+2
 
 
 		clc
@@ -523,178 +501,6 @@ jpgrnd_blueright
 
 :		rts
 
-/*
-		lda #$00
-		sta jpg_rend_column
-
-jpgrnd_column_loop
-		ldy #$00
-		ldz #$00
-
-jpgrnd_scan_loop
-		ldx #$00
-
-jpgrend_getrgb
-
-		phy
-
-jpgrnd_red
-		lda $babe,x
-		tay
-		lda jpg_snaptable,y
-		sta $d770										; math multiplier A register
-		lda #36
-		sta $d774
-		lda $d778+0
-		sta jpg_rend_red
-
-jpgrnd_green
-		lda $babe,x
-		tay
-		lda jpg_snaptable,y
-		sta $d770
-		lda #6
-		sta $d774
-		lda $d778+0
-		sta jpg_rend_green
-
-jpgrnd_blue
-		lda $babe,x
-		tay
-		lda jpg_snaptable,y
-		clc
-		adc jpg_rend_green
-		adc jpg_rend_red
-		adc #$27										; add 27 to get to front of 216 web palette
-
-		ply
-
-		sta [uidraw_scrptr],z
-
-		inz
-		inx
-		cpx #8											; add 8 to get to next row in this char
-		bne jpgrend_getrgb
-
-		clc
-		lda jpgrnd_red+1
-		adc #<(jpg_bufwidth*8)							; add 8*bufwidth to get to next row in jpg data
-		sta jpgrnd_red+1
-		lda jpgrnd_red+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_red+2
-
-		clc
-		lda jpgrnd_green+1
-		adc #<(jpg_bufwidth*8)
-		sta jpgrnd_green+1
-		lda jpgrnd_green+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_green+2
-
-		clc
-		lda jpgrnd_blue+1
-		adc #<(jpg_bufwidth*8)
-		sta jpgrnd_blue+1
-		lda jpgrnd_blue+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_blue+2
-
-		iny
-		cpy #8
-		bne jpgrnd_scan_loop
-
-		clc											; add 64 to get to the next character
-		lda uidraw_scrptr+0
-		adc #64
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$00
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+3
-		adc #$00
-		sta uidraw_scrptr+3
-
-		sec
-		lda jpgrnd_red+1
-		sbc #<(jpg_bufwidth*8*8 - 8)				; subtract 'enough' to get to the next char in the jpg data
-		sta jpgrnd_red+1
-		lda jpgrnd_red+2
-		sbc #>(jpg_bufwidth*8*8 - 8)
-		sta jpgrnd_red+2
-
-		sec
-		lda jpgrnd_green+1
-		sbc #<(jpg_bufwidth*8*8 - 8)
-		sta jpgrnd_green+1
-		lda jpgrnd_green+2
-		sbc #>(jpg_bufwidth*8*8 - 8)
-		sta jpgrnd_green+2
-
-		sec
-		lda jpgrnd_blue+1
-		sbc #<(jpg_bufwidth*8*8 - 8)
-		sta jpgrnd_blue+1
-		lda jpgrnd_blue+2
-		sbc #>(jpg_bufwidth*8*8 - 8)
-		sta jpgrnd_blue+2
-
-		inc jpg_rend_column
-		lda jpg_rend_column
-		cmp #jpg_bufwidth
-		beq :+
-		jmp jpgrnd_column_loop
-
-:		rts
-*/
-
-; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpg_bayer_matrix
-/*
-		.byte  37, 139,  63, 165,  37, 139,  63, 165
-		.byte 190,  88, 216, 114, 190,  88, 216, 114
-		.byte  63, 165,  37, 139,  63, 165,  37, 139
-		.byte 216, 114, 190,  88, 216, 114, 190,  88
-		.byte  37, 139,  63, 165,  37, 139,  63, 165
-		.byte 190,  88, 216, 114, 190,  88, 216, 114
-		.byte  63, 165,  37, 139,  63, 165,  37, 139
-		.byte 216, 114, 190,  88, 216, 114, 190,  88
-*/
-		.byte 128, 237, 156, 255, 128, 237, 156, 255
-		.byte 255, 182, 255, 210, 255, 182, 255, 210
-		.byte 156, 255, 128, 237, 156, 255, 128, 237
-		.byte 255, 210, 255, 182, 255, 210, 255, 182
-		.byte 128, 237, 156, 255, 128, 237, 156, 255
-		.byte 255, 182, 255, 210, 255, 182, 255, 210
-		.byte 156, 255, 128, 237, 156, 255, 128, 237
-		.byte 255, 210, 255, 182, 255, 210, 255, 182
-
-jpg_snaptable
-		.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-		.byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-		.byte 0,0,0,0,0,0,0,0,0,0
-		.byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
-		.byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
-		.byte 1,1,1,1,1,1,1,1,1,1
-		.byte 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
-		.byte 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
-		.byte 2,2,2,2,2,2,2,2,2,2
-		.byte 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
-		.byte 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
-		.byte 3,3,3,3,3,3,3,3,3,3
-		.byte 4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
-		.byte 4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
-		.byte 4,4,4,4,4,4,4,4,4,4
-		.byte 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
-		.byte 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
-		.byte 5,5,5,5,5,5,5,5,5,5
-
-		.byte 5,5,5,5
-
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
 jpg_render_irq
@@ -705,30 +511,47 @@ jpg_render_irq
 		phy
 		phz
 
-		lda #0											; set up DMA copy to start at $20000
-		sta jpgruc2+0
-		lda #0
-		sta jpgruc2+1
-		lda #2
-		sta jpgruc3
-		sta jpgruc2r3
-		sta jpgruc2g3
-		sta jpgruc2b3
+		lda #<.loword(jpgdata + 0*320)
+		sta jpgrucr+0
+		lda #>.loword(jpgdata + 0*320)
+		sta jpgrucr+1
+		lda #<.hiword(jpgdata + 0*320)
+		sta jpgrucr+2
 
-		lda #<$0300
-		sta jpgruc2r2+0
-		lda #>$0300
-		sta jpgruc2r2+1
+		lda #<.loword(jpgdata + 1*320)
+		sta jpgrucg+0
+		lda #>.loword(jpgdata + 1*320)
+		sta jpgrucg+1
+		lda #<.hiword(jpgdata + 1*320)
+		sta jpgrucg+2
 
-		lda #<$0340
-		sta jpgruc2g2+0
-		lda #>$0340
-		sta jpgruc2g2+1
+		lda #<.loword(jpgdata + 2*320)
+		sta jpgrucb+0
+		lda #>.loword(jpgdata + 2*320)
+		sta jpgrucb+1
+		lda #<.hiword(jpgdata + 2*320)
+		sta jpgrucb+2
 
-		lda #<$0380
-		sta jpgruc2b2+0
-		lda #>$0380
-		sta jpgruc2b2+1
+		lda #<.loword(jpgdata + 0*320 + 240)
+		sta jpgrucrr+0
+		lda #>.loword(jpgdata + 0*320 + 240)
+		sta jpgrucrr+1
+		lda #<.hiword(jpgdata + 0*320 + 240)
+		sta jpgrucrr+2
+
+		lda #<.loword(jpgdata + 1*320 + 240)
+		sta jpgrucgr+0
+		lda #>.loword(jpgdata + 1*320 + 240)
+		sta jpgrucgr+1
+		lda #<.hiword(jpgdata + 1*320 + 240)
+		sta jpgrucgr+2
+
+		lda #<.loword(jpgdata + 2*320 + 240)
+		sta jpgrucbr+0
+		lda #>.loword(jpgdata + 2*320 + 240)
+		sta jpgrucbr+1
+		lda #<.hiword(jpgdata + 2*320 + 240)
+		sta jpgrucbr+2
 
 		lda #$00
 		sta $d020
@@ -738,58 +561,82 @@ jpg_render_irq_loop
 		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
 		and #%00111111
 		sta $d070
-		DMA_RUN_JOB jpgrender_updatecolours
+		DMA_RUN_JOB jpgrender_updatecoloursred
+		DMA_RUN_JOB jpgrender_updatecoloursgreen
+		DMA_RUN_JOB jpgrender_updatecoloursblue
 		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
 		and #%00111111
 		ora #%10000000
 		sta $d070
-		DMA_RUN_JOB jpgrender_updatecolours2red
-		DMA_RUN_JOB jpgrender_updatecolours2green
-		DMA_RUN_JOB jpgrender_updatecolours2blue
+		DMA_RUN_JOB jpgrender_updatecoloursredright
+		DMA_RUN_JOB jpgrender_updatecoloursgreenright
+		DMA_RUN_JOB jpgrender_updatecoloursblueright
 
 		clc
-		lda jpgruc2+0									; add 3*320 to DMA copy
-		adc #$c0
-		sta jpgruc2+0
-		lda jpgruc2+1
-		adc #$03
-		sta jpgruc2+1
-		lda jpgruc3+0
-		adc #$00
-		sta jpgruc3+0
+		lda jpgrucr+0									; add 3*320 to DMA copy
+		adc #<.loword(3*320)
+		sta jpgrucr+0
+		lda jpgrucr+1
+		adc #>.loword(3*320)
+		sta jpgrucr+1
+		lda jpgrucr+2
+		adc #<.hiword(3*320)
+		sta jpgrucr+2
 
 		clc
-		lda jpgruc2r2+0									; add 3*320 to DMA copy
-		adc #$c0
-		sta jpgruc2r2+0
-		lda jpgruc2r2+1
-		adc #$03
-		sta jpgruc2r2+1
-		lda jpgruc2r3+0
-		adc #$00
-		sta jpgruc2r3+0
+		lda jpgrucg+0									; add 3*320 to DMA copy
+		adc #<.loword(3*320)
+		sta jpgrucg+0
+		lda jpgrucg+1
+		adc #>.loword(3*320)
+		sta jpgrucg+1
+		lda jpgrucg+2
+		adc #<.hiword(3*320)
+		sta jpgrucg+2
 
 		clc
-		lda jpgruc2g2+0									; add 3*320 to DMA copy
-		adc #$c0
-		sta jpgruc2g2+0
-		lda jpgruc2g2+1
-		adc #$03
-		sta jpgruc2g2+1
-		lda jpgruc2g3+0
-		adc #$00
-		sta jpgruc2g3+0
+		lda jpgrucb+0									; add 3*320 to DMA copy
+		adc #<.loword(3*320)
+		sta jpgrucb+0
+		lda jpgrucb+1
+		adc #>.loword(3*320)
+		sta jpgrucb+1
+		lda jpgrucb+2
+		adc #<.hiword(3*320)
+		sta jpgrucb+2
 
 		clc
-		lda jpgruc2b2+0									; add 3*320 to DMA copy
-		adc #$c0
-		sta jpgruc2b2+0
-		lda jpgruc2b2+1
-		adc #$03
-		sta jpgruc2b2+1
-		lda jpgruc2b3+0
-		adc #$00
-		sta jpgruc2b3+0
+		lda jpgrucrr+0									; add 3*320 to DMA copy
+		adc #<.loword(3*320)
+		sta jpgrucrr+0
+		lda jpgrucrr+1
+		adc #>.loword(3*320)
+		sta jpgrucrr+1
+		lda jpgrucrr+2
+		adc #<.hiword(3*320)
+		sta jpgrucrr+2
+
+		clc
+		lda jpgrucgr+0									; add 3*320 to DMA copy
+		adc #<.loword(3*320)
+		sta jpgrucgr+0
+		lda jpgrucgr+1
+		adc #>.loword(3*320)
+		sta jpgrucgr+1
+		lda jpgrucgr+2
+		adc #<.hiword(3*320)
+		sta jpgrucgr+2
+
+		clc
+		lda jpgrucbr+0									; add 3*320 to DMA copy
+		adc #<.loword(3*320)
+		sta jpgrucbr+0
+		lda jpgrucbr+1
+		adc #>.loword(3*320)
+		sta jpgrucbr+1
+		lda jpgrucbr+2
+		adc #<.hiword(3*320)
+		sta jpgrucbr+2
 
 		lda $d012
 		clc
@@ -954,134 +801,68 @@ jpgrender_clearbitmapjob
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpgrender_updatecolours
-
-		;DMA_HEADER $20000 >> 20, $30000 >> 20
-		; f018a = 11 bytes, f018b is 12 bytes
-		.byte $0a ; Request format is F018A
-		.byte $80, ($20000 >> 20) ; sourcebank
-		.byte $81, ($d100 >> 20) ; destbank
-
-		.byte $82, 0 ; Source skip rate (256ths of bytes)
-		.byte $83, 1 ; Source skip rate (whole bytes)
-
-		.byte $84, 0 ; Destination skip rate (256ths of bytes)
-		.byte $85, 1 ; Destination skip rate (whole bytes)
-
-		.byte $00 ; No more options
-
-		.byte $00 ; Copy and last request
-		.word 3*256 ; Size of Copy
-
-jpgruc2
-		.word 0											; $20000 & $ffff
-jpgruc3
-		.byte 2											; ($20000 >> 16)
-
-		.word $d100 & $ffff
-		.byte (($d100 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-
-		.word $0000
-
-		; $0300*200 = $25800
+jpgrender_updatecoloursred
+			.byte $0a, $80, ($20000 >> 20), $81, ($d108 >> 20)
+			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
+			.word 240
+jpgrucr		.byte 0, 0, 0
+			.word $d108 & $ffff
+			.byte (($d108 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+			.word $0000
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpgrender_updatecolours2red
-
-		;DMA_HEADER $20000 >> 20, $30000 >> 20
-		; f018a = 11 bytes, f018b is 12 bytes
-		.byte $0a ; Request format is F018A
-		.byte $80, ($20000 >> 20) ; sourcebank
-		.byte $81, ($d100 >> 20) ; destbank
-
-		.byte $82, 0 ; Source skip rate (256ths of bytes)
-		.byte $83, 1 ; Source skip rate (whole bytes)
-
-		.byte $84, 0 ; Destination skip rate (256ths of bytes)
-		.byte $85, 1 ; Destination skip rate (whole bytes)
-
-		.byte $00 ; No more options
-
-		.byte $00 ; Copy and last request
-		.word 64 ; Size of Copy
-
-jpgruc2r2
-		.word $0000										; $20000 & $ffff
-jpgruc2r3
-		.byte 2											; ($20000 >> 16)
-
-		.word $d100 & $ffff
-		.byte (($d100 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-
-		.word $0000
-
-		; $0300*200 = $25800
+jpgrender_updatecoloursgreen
+			.byte $0a, $80, ($20000 >> 20), $81, ($d208 >> 20)
+			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
+			.word 240
+jpgrucg		.byte 0, 0, 0
+			.word $d208 & $ffff
+			.byte (($d208 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+			.word $0000
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpgrender_updatecolours2green
-
-		;DMA_HEADER $20000 >> 20, $30000 >> 20
-		; f018a = 11 bytes, f018b is 12 bytes
-		.byte $0a ; Request format is F018A
-		.byte $80, ($20000 >> 20) ; sourcebank
-		.byte $81, ($d200 >> 20) ; destbank
-
-		.byte $82, 0 ; Source skip rate (256ths of bytes)
-		.byte $83, 1 ; Source skip rate (whole bytes)
-
-		.byte $84, 0 ; Destination skip rate (256ths of bytes)
-		.byte $85, 1 ; Destination skip rate (whole bytes)
-
-		.byte $00 ; No more options
-
-		.byte $00 ; Copy and last request
-		.word 64 ; Size of Copy
-
-jpgruc2g2
-		.word $0100										; $20000 & $ffff
-jpgruc2g3
-		.byte 2											; ($20000 >> 16)
-
-		.word $d200 & $ffff
-		.byte (($d200 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-
-		.word $0000
-
-		; $0300*200 = $25800
+jpgrender_updatecoloursblue
+			.byte $0a, $80, ($20000 >> 20), $81, ($d308 >> 20)
+			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
+			.word 240
+jpgrucb		.byte 0, 0, 0
+			.word $d308 & $ffff
+			.byte (($d308 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+			.word $0000
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpgrender_updatecolours2blue
+jpgrender_updatecoloursredright
+			.byte $0a, $80, ($20000 >> 20), $81, ($d108 >> 20)
+			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
+			.word 80
+jpgrucrr	.byte 0, 0, 0
+			.word $d108 & $ffff
+			.byte (($d108 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+			.word $0000
 
-		;DMA_HEADER $20000 >> 20, $30000 >> 20
-		; f018a = 11 bytes, f018b is 12 bytes
-		.byte $0a ; Request format is F018A
-		.byte $80, ($20000 >> 20) ; sourcebank
-		.byte $81, ($d300 >> 20) ; destbank
+; ----------------------------------------------------------------------------------------------------------------------------------------
 
-		.byte $82, 0 ; Source skip rate (256ths of bytes)
-		.byte $83, 1 ; Source skip rate (whole bytes)
+jpgrender_updatecoloursgreenright
+			.byte $0a, $80, ($20000 >> 20), $81, ($d208 >> 20)
+			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
+			.word 80
+jpgrucgr	.byte 0, 0, 0
+			.word $d208 & $ffff
+			.byte (($d208 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+			.word $0000
 
-		.byte $84, 0 ; Destination skip rate (256ths of bytes)
-		.byte $85, 1 ; Destination skip rate (whole bytes)
+; ----------------------------------------------------------------------------------------------------------------------------------------
 
-		.byte $00 ; No more options
-
-		.byte $00 ; Copy and last request
-		.word 64 ; Size of Copy
-
-jpgruc2b2
-		.word $0200										; $20000 & $ffff
-jpgruc2b3
-		.byte 2											; ($20000 >> 16)
-
-		.word $d300 & $ffff
-		.byte (($d300 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-
-		.word $0000
-
-		; $0300*200 = $25800
+jpgrender_updatecoloursblueright
+			.byte $0a, $80, ($20000 >> 20), $81, ($d308 >> 20)
+			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
+			.word 80
+jpgrucbr	.byte 0, 0, 0
+			.word $d308 & $ffff
+			.byte (($d308 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
+			.word $0000
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
