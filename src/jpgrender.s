@@ -599,17 +599,23 @@ jpg_render_irq
 		lda #<.hiword(jpgdata + 2*320 + 240)
 		sta jpgrucbr+2
 
+		lda #$33
+:		cmp $d012
+		bne :-
+
 		lda #$00
 		sta $d020
 
 		ldx #$00
-jpg_render_irq_loop		
+jpg_render_irq_loop
+
 		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
 		and #%00111111
 		sta $d070
 		DMA_RUN_JOB jpgrender_updatecoloursred
 		DMA_RUN_JOB jpgrender_updatecoloursgreen
 		DMA_RUN_JOB jpgrender_updatecoloursblue
+
 		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
 		and #%00111111
 		ora #%10000000
@@ -695,11 +701,7 @@ jpg_render_irq_loop
 		beq :+
 		jmp jpg_render_irq_loop
 
-:
-		lda #$80
-		sta $d020
-
-		jsr mouse_update
+:		jsr mouse_update
 		jsr keyboard_update
 
 		lda mouse_released
@@ -717,7 +719,7 @@ jpg_render_irq_loop
 		sta main_event
 
 :		
-		lda #$33
+		lda #$32
 		sta $d012
 
 		plz
