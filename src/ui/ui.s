@@ -10,6 +10,7 @@ ui_init
 
 		lda #80*2										; logical chars per row
 		sta $d058
+		sta $d05e
 		lda #$00
 		sta $d059
 

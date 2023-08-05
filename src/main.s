@@ -55,6 +55,8 @@ entry_main
 
 		lda #%11111000									; unmap c65 roms $d030 by clearing bits 3-7
 		trb $d030
+		lda #%00000100									; PAL - Use PALETTE ROM (0) or RAM (1) entries for colours 0 - 15
+		tsb $d030
 
 		lda #$05										; enable Super-Extended Attribute Mode by asserting the FCLRHI and CHR16 signals - set bits 2 and 0 of $D054.
 		sta $d054
@@ -64,6 +66,7 @@ entry_main
 
 		lda #40*2										; logical chars per row
 		sta $d058
+		sta $d05e
 		lda #$00
 		sta $d059
 

@@ -32,6 +32,7 @@ GCC				= gcc
 MC				= MegaConvert
 ADDADDR			= addaddr
 MEGAMOD			= MegaMod
+EL				= etherload
 XMEGA65			= H:\xemu\xmega65.exe
 
 CONVERTBREAK	= 's/al [0-9A-F]* \.br_\([a-z]*\)/\0\nbreak \.br_\1/'
