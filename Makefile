@@ -1,6 +1,7 @@
 # -----------------------------------------------------------------------------
 
 megabuild		= 1
+useetherload	= 1
 finalbuild		= 1
 attachdebugger	= 0
 
@@ -20,7 +21,7 @@ BIN_DIR			= ./bin
 
 # mega65 fork of ca65: https://github.com/dillof/cc65
 AS				= ca65mega
-ASFLAGS			= -g -D finalbuild=$(finalbuild) -D megabuild=$(megabuild) --cpu 45GS02 -U --feature force_range -I ./exe
+ASFLAGS			= -g -D finalbuild=$(finalbuild) -D megabuild=$(megabuild) -D useetherload=$(useetherload) --cpu 45GS02 -U --feature force_range -I ./exe
 LD				= ld65
 C1541			= c1541
 CC1541			= cc1541
@@ -32,7 +33,7 @@ GCC				= gcc
 MC				= MegaConvert
 ADDADDR			= addaddr
 MEGAMOD			= MegaMod
-EL				= etherload
+EL				= etherload -i 192.168.1.255
 XMEGA65			= H:\xemu\xmega65.exe
 
 CONVERTBREAK	= 's/al [0-9A-F]* \.br_\([a-z]*\)/\0\nbreak \.br_\1/'
@@ -143,6 +144,31 @@ run: $(EXE_DIR)/megajpeg.d81
 
 ifeq ($(megabuild), 1)
 
+ifeq ($(useetherload), 1)
+
+	$(CP) $(BIN_DIR)/font_chars1.bin $(EXE_DIR)/00
+	$(CP) $(BIN_DIR)/glyphs_chars1.bin $(EXE_DIR)/01
+	$(CP) $(BIN_DIR)/glyphs_pal1.bin $(EXE_DIR)/02
+	$(CP) $(BIN_DIR)/cursor_sprites1.bin $(EXE_DIR)/03
+	$(CP) $(BIN_DIR)/kbcursor_sprites1.bin $(EXE_DIR)/04
+	$(CP) $(BIN_DIR)/cursor_pal1.bin $(EXE_DIR)/05
+	$(CP) $(BIN_DIR)/data0a00.bin $(EXE_DIR)/06
+	$(CP) $(BIN_DIR)/data4000.bin $(EXE_DIR)/07
+	$(CP) $(BIN_DIR)/ycbcc2rgb.bin $(EXE_DIR)/08
+
+	$(EL) -b 10000 --halt $(EXE_DIR)/00
+	$(EL) -b 14000 --halt $(EXE_DIR)/01
+	$(EL) -b 0c700 --halt $(EXE_DIR)/02
+	$(EL) -b 0ce00 --halt $(EXE_DIR)/03
+	$(EL) -b 0cf00 --halt $(EXE_DIR)/04
+	$(EL) -b 0ca00 --halt $(EXE_DIR)/05
+	$(EL) -b 00400 --halt $(EXE_DIR)/06
+	$(EL) -b 00a00 --halt $(EXE_DIR)/07
+	$(EL) -b 08100 --halt $(EXE_DIR)/08
+	$(EL) -b 02001 --offset ff --jump 2100 $(EXE_DIR)/boot.prg
+
+else
+
 	m65 -l COM3 -F
 	mega65_ftp.exe -l COM3 -s 2000000 -c "cd /" \
 	-c "put D:\Mega\MegaJPGFC\exe\megajpeg.d81 megajpg.d81"
@@ -158,6 +184,8 @@ ifeq ($(megabuild), 1)
 	m65 -l COM3 -T 'load "boot"'
 	m65 -l COM3 -T 'list'
 	m65 -l COM3 -T 'run'
+
+endif
 
 ifeq ($(attachdebugger), 1)
 	m65dbg --device /dev/ttyS2
