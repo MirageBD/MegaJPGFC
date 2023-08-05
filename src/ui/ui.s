@@ -10,12 +10,14 @@ ui_init
 
 		lda #80*2										; logical chars per row
 		sta $d058
-		sta $d05e
 		lda #$00
 		sta $d059
 
 		lda #%10001000									; set H640, V400
 		sta $d031
+
+		lda #80											; set to 80 to keep etherload happy
+		sta $d05e
 
 		lda #$00
 		sta $d05b										; Set display to V400

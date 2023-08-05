@@ -64,9 +64,11 @@ entry_main
 		lda #%10100000									; CLEAR bit7=40 column, bit5=Enable extended attributes and 8 bit colour entries
 		trb $d031
 
+		lda #80											; set to 80 for etherload
+		sta $d05e
+
 		lda #40*2										; logical chars per row
 		sta $d058
-		sta $d05e
 		lda #$00
 		sta $d059
 
