@@ -599,7 +599,9 @@ jpg_render_irq
 		lda #<.hiword(jpgdata + 2*320 + 240)
 		sta jpgrucbr+2
 
-		lda #$33
+		clc
+		lda palntscscreenstart
+		adc #$01
 :		cmp $d012
 		bne :-
 
@@ -719,7 +721,16 @@ jpg_render_irq_loop
 		sta main_event
 
 :		
+
 		lda #$32
+		sta palntscscreenstart
+
+		bit $d06f
+		bpl palirq
+
+ntscirq	lda #$18
+		sta palntscscreenstart
+palirq	lda palntscscreenstart
 		sta $d012
 
 		plz
@@ -729,6 +740,9 @@ jpg_render_irq_loop
 		plp
 		asl $d019
 		rti
+
+palntscscreenstart
+		.byte $32
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 

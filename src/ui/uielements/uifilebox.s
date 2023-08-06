@@ -187,6 +187,14 @@ uifilebox_processdirentry
 		bmi :+
 		rts
 
+:
+		clc													; test number of entries
+		ldy #$06
+		lda (zpptr3),y
+		cmp #$20											; don't allow more than 16
+		bne :+
+		rts
+
 :		clc													; increase number of entries
 		ldy #$06
 		lda (zpptr3),y

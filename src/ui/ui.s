@@ -120,27 +120,6 @@ ui_init
 		jsr uimouse_init
 		jsr uikeyboard_init
 
-		; pal y border start
-		lda #<104
-		sta verticalcenter+0
-		lda #>104
-		sta verticalcenter+1
-
-		bit $d06f
-		bpl pal
-
-ntsc	lda #<55
-		sta verticalcenter+0
-		lda #>55
-		sta verticalcenter+1
-
-pal		lda verticalcenter+0
-		sta $d048
-		lda #%00001111
-		trb $d049
-		lda verticalcenter+1
-		tsb $d049
-
         rts
 
 verticalcenter

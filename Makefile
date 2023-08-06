@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 
 megabuild		= 1
-useetherload	= 1
+useetherload	= 0
 finalbuild		= 1
 attachdebugger	= 0
 

@@ -42,10 +42,6 @@ entry_main
 		sta $d02f
 		eom
 
-		lda #%10000000									; force PAL mode, because I can't be bothered with fixing it for NTSC
-		trb $d06f										; clear bit 7 for PAL ; trb $d06f 
-		;tsb $d06f										; set bit 7 for NTSC  ; tsb $d06f
-
 		lda #$41										; enable 40MHz
 		sta $00
 
@@ -218,8 +214,8 @@ loop
 		cmp #$01
 		beq load_image
 		cmp #$03
-		beq main_restart
-		jmp loop
+		bne loop
+		jmp main_restart
 
 load_image
 		jsr sdc_openfile
