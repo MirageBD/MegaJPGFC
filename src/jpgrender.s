@@ -207,7 +207,31 @@ endscreenplot
 		lda #$00
 		sta $d016
 
-		;lda #$50		; set TEXTXPOS to same as SDBDRWDLSB
+/*
+		; bigger screen
+		lda #$12										; Y Position Where Character Display Starts ($D04E LSB, 0–3 of $D04F MSB)
+		sta $d04e
+		lda #35											; set number of rows
+		sta $d07b
+
+		lda #$00										; reposition start of top border to what's juuuuust visible on my monitor
+		sta $d048
+		lda #$50										; reposition start of bottom border to what's juuuuust visible on my monitor
+		sta $d04a
+		lda #$02
+		sta $d04b
+
+		lda #$18										; X position of the left side border edge
+		sta $d05c
+
+		lda #$27										; X Position Where Character Display Starts ($D04C LSB, bits 0 – 3 of $D04D MSB)
+		sta $d04c
+		lda #$00
+		sta $d04d
+		;end bigger screen
+*/
+
+		;lda #$00		; set TEXTXPOS to same as SDBDRWDLSB
 		;lda $d04c
 		;sta $d05c
 

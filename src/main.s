@@ -135,8 +135,6 @@ entry_main
 
 		cli
 
-.if useetherload = 0
-
 		jsr fl_init
 		jsr fl_waiting
 		FLOPPY_FAST_LOAD uichars,			$30, $30
@@ -149,8 +147,6 @@ entry_main
 		FLOPPY_FAST_LOAD $0a00,				$30, $37
 		FLOPPY_FAST_LOAD $8100,				$30, $38
 		jsr fl_exit
-
-.endif		
 
 main_restart
 		sei

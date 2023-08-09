@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 
 megabuild		= 1
-useetherload	= 0
+useetherload	= 1
 finalbuild		= 1
 attachdebugger	= 0
 
@@ -35,6 +35,7 @@ ADDADDR			= addaddr
 MEGAMOD			= MegaMod
 EL				= etherload -i 192.168.1.255
 XMEGA65			= H:\xemu\xmega65.exe
+MEGAFTP			= mega65_ftp -i 192.168.1.255
 
 CONVERTBREAK	= 's/al [0-9A-F]* \.br_\([a-z]*\)/\0\nbreak \.br_\1/'
 CONVERTWATCH	= 's/al [0-9A-F]* \.wh_\([a-z]*\)/\0\nwatch store \.wh_\1/'
@@ -146,30 +147,11 @@ ifeq ($(megabuild), 1)
 
 ifeq ($(useetherload), 1)
 
-	$(CP) $(BIN_DIR)/font_chars1.bin $(EXE_DIR)/00
-	$(CP) $(BIN_DIR)/glyphs_chars1.bin $(EXE_DIR)/01
-	$(CP) $(BIN_DIR)/glyphs_pal1.bin $(EXE_DIR)/02
-	$(CP) $(BIN_DIR)/cursor_sprites1.bin $(EXE_DIR)/03
-	$(CP) $(BIN_DIR)/kbcursor_sprites1.bin $(EXE_DIR)/04
-	$(CP) $(BIN_DIR)/cursor_pal1.bin $(EXE_DIR)/05
-	$(CP) $(BIN_DIR)/data0a00.bin $(EXE_DIR)/06
-	$(CP) $(BIN_DIR)/data4000.bin $(EXE_DIR)/07
-	$(CP) $(BIN_DIR)/ycbcc2rgb.bin $(EXE_DIR)/08
-
-	$(EL) -b 10000 --halt $(EXE_DIR)/00
-	$(EL) -b 14000 --halt $(EXE_DIR)/01
-	$(EL) -b 0c700 --halt $(EXE_DIR)/02
-	$(EL) -b 0ce00 --halt $(EXE_DIR)/03
-	$(EL) -b 0cf00 --halt $(EXE_DIR)/04
-	$(EL) -b 0ca00 --halt $(EXE_DIR)/05
-	$(EL) -b 00400 --halt $(EXE_DIR)/06
-	$(EL) -b 00a00 --halt $(EXE_DIR)/07
-	$(EL) -b 08100 --halt $(EXE_DIR)/08
-	$(EL) -b 02001 --offset ff --jump 2100 $(EXE_DIR)/boot.prg
+	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpeg.d81 megajpg.d81" -c "quit"
+	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/bootaddr.prg
 
 else
 
-	m65 -l COM3 -F
 	mega65_ftp.exe -l COM3 -s 2000000 -c "cd /" \
 	-c "put D:\Mega\MegaJPGFC\exe\megajpeg.d81 megajpg.d81"
 

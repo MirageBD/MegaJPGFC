@@ -25,8 +25,8 @@ jpg_reslen				.word 0						; lame restart markers
 ; F = {  0,    0,    0,     0, 0,      0,     0,   256 }
 ; S = {  0,    0,    0,     0, 0,      0,     0,   256 }
 
-.define jpg_negmlo		$0400						; $0A00-$1000 DATA BLOCK!!! = $0600
-.define jpg_posmlo		$0500						; mult tables
+.define jpg_negmlo		$0400						; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
+.define jpg_posmlo		$0500						; 2 pages
 .define jpg_negmhi		$0700
 .define jpg_posmhi		$0800						; 2 pages
 
@@ -112,11 +112,11 @@ jpg_reslen				.word 0						; lame restart markers
 .define jpg_bitshi		$07
 
 .define jpg_mult1lo		$08							; multiplication tables
-.define jpg_mult1hi		$0a
-.define jpg_mult2lo		$0c
-.define jpg_mult2hi		$0e
+.define jpg_mult1hi		$0c
+.define jpg_mult2lo		$10
+.define jpg_mult2hi		$14
 
-.define jpg_dct			$10
+.define jpg_dct			$18
 .define jpg_f0			jpg_dct+0
 .define jpg_f1			jpg_dct+2
 .define jpg_f2			jpg_dct+4
@@ -126,14 +126,14 @@ jpg_reslen				.word 0						; lame restart markers
 .define jpg_f6			jpg_dct+12
 .define jpg_f7			jpg_dct+14
 
-.define jpg_index		$20							; idct stuff
+.define jpg_index		$28						; idct stuff
 
-.define jpg_t1			$22
-.define jpg_t2			$24
-.define jpg_t3			$26
+.define jpg_t1			$2a
+.define jpg_t2			$2c
+.define jpg_t3			$2e
 
-.define jpg_vsamp		$28							; desample
-.define jpg_hsamp		$29
+.define jpg_vsamp		$30							; desample
+.define jpg_hsamp		$31
 
 
 .define jpg_coeff		$02a7						; 8 coefficients

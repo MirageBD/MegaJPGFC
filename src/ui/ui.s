@@ -13,7 +13,7 @@ ui_init
 		lda #$00
 		sta $d059
 
-		lda #%10001000									; set H640, V400
+		lda #%10001000									; set H640, V400, interlace
 		sta $d031
 
 		lda #80											; set to 80 to keep etherload happy
