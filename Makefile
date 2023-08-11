@@ -149,6 +149,7 @@ ifeq ($(useetherload), 1)
 
 	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpeg.d81 megajpg.d81" -c "quit"
 	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/bootaddr.prg
+#	$(EL) -b 02001 --offset ff --jump 2100 $(EXE_DIR)/boot.prg
 
 else
 
