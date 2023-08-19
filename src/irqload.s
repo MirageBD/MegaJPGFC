@@ -689,7 +689,7 @@ fl_read_from_first_half
 		sta fl_file_next_sector
 		lda fastload_sector_buffer+0
 		sta fl_file_next_track
-		bne fl_1st_half_full_sector
+		bne fl_1st_half_full_sector						; if next track is 0 then this is a partial sector and 'sector' now becomes the number of bytes left in this sector
 
 fl_1st_half_partial_sector
 		lda fastload_sector_buffer+1
@@ -708,7 +708,7 @@ fl_read_from_second_half
 		sta fl_file_next_sector
 		lda fastload_sector_buffer+$100
 		sta fl_file_next_track
-		bne fl_2nd_half_full_sector
+		bne fl_2nd_half_full_sector						; if next track is 0 then this is a partial sector and 'sector' now becomes the number of bytes left in this sector
 
 fl_2nd_half_partial_sector
 		lda fastload_sector_buffer+$101
@@ -726,21 +726,21 @@ fl_dma_read_bytes
 		asl
 		asl
 		asl
-		sta fl_data_read_dmalist+2
+		sta fl_data_read_dmalist+2						; update destination MB
 		lda fastload_address+2
 		lsr
 		lsr
 		lsr
 		lsr
 		ora fl_data_read_dmalist+2
-		sta fl_data_read_dmalist+2
+		sta fl_data_read_dmalist+2						; update destination MB
 		lda fastload_address+2
 		and #$0f
-		sta fl_data_read_dmalist+12
+		sta fl_data_read_dmalist+12						; update Dest bank
 		lda fastload_address+1
-		sta fl_data_read_dmalist+11
+		sta fl_data_read_dmalist+11						; update Dest Address high
 		lda fastload_address+0
-		sta fl_data_read_dmalist+10
+		sta fl_data_read_dmalist+10						; update Dest Address low
 
 		lda #$00										; Copy FDC data to our buffer
 		sta $d704
