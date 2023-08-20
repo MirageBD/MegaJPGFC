@@ -1,3 +1,8 @@
+; 0. fastload_request = 1 (fl_new_request)
+; 1. fastload_request = 2 (fl_directory_scan)
+; 2. fastload_request = 3 (fl_read_file_block)
+; 3. jump to 2
+
 ; ----------------------------------------------------------------------------------------------------
 
 ; D080        IRQ     LED     MOTOR   SWAP    SIDE    DS      DS      DS      
@@ -153,8 +158,6 @@ fastload_irq_handler
 		tya
 		pha
 
-		;jsr fastload_irq
-
 		ldx #$00
 :		lda fastload_sector_buffer,x
 		ldy #$00
@@ -209,14 +212,18 @@ fastload_request
 
 		; $00 = fl_idle									; idle
 		; $01 = fl_new_request							; requested
-		; $02 = fl_directory_scan						; acknowledged
-		; $03 = fl_read_file_block						; advance to next state
+		; $02 = fl_directory_scan						; scan directory
+		; $03 = fl_read_file_block						; read file block
 		; $04 = fl_seek_track_0							; seek to track 0
 		; $05 = fl_reading_sector						; track stepping/sector reading state
 		; $80 = File not found							; file not found
 
 fastload_request_stashed								; Remember the state that requested a sector read
 		.byte 0
+
+		; Variables for the logical track and sector of the next 256 byte block of the file.
+		; These have to get translated into the physical track and sector of the drive, which like the 1581,
+		; stores two blocks in each physical sector.
 
 fl_current_track
 		.byte 0
@@ -244,27 +251,26 @@ fastload_directory_entries
 .endrepeat
 
 fastload_irq
-		lda fastload_request							; If the FDC is busy, do nothing, as we can't progress.
-		bne todo										; This really simplifies the state machine into a series of sector reads
-		rts
+		lda fastload_request							; are we in idle state?
+		bne todo										; nope, go and check if the FDC is busy
+		rts												; yep, back out
 
-todo	lda $d082
-		bpl fl_fdc_not_busy								; wait for the BUSY flag (bit 7 of $D082)
-		rts
+todo	lda $d082										; is the FDC busy?
+		bpl fl_fdc_not_busy								; nope, continue with request
+		rts												; yep, back out
 
 fl_fdc_not_busy
-		lda fastload_request							; FDC is not busy, so check what state we are in
-		bpl fl_not_in_error_state
-
-		rts
+		lda fastload_request							; are we in error state?
+		bpl fl_not_in_error_state						; nope, continue
+		rts												; yep, back out
 
 fl_not_in_error_state
-		cmp #8
-		bcc fl_job_ok
-		rts												; Ignore request/status codes that don't correspond to actions
+		cmp #8											; is the request smaller than 8?
+		bcc fl_job_ok									; yep, continue
+		rts												; nope, something must have gone wrong ($80 (file not found) is bigger than 8)
 
 fl_job_ok
-		asl												; Shift state left one bit, so that we can use it as a lookup
+		asl												; shift state left one bit, so that we can use it as a lookup
 		tax												; into a jump table. Everything else is handled by the jump table
 		jmp (fl_jumptable,x)
 
@@ -530,7 +536,7 @@ fl_got_file_track_and_sector
 		sty fl_file_next_track							; Store track and sector of file
 		sta fl_file_next_sector
 
-		lda #3											; Advance to next state
+		lda #3											; Advance to next state (3=fl_read_file_block)
 		sta fastload_request
 
 		jsr fl_read_next_sector							; Request reading of next track and sector
@@ -574,6 +580,8 @@ fl_load_next_dir_sector
 		jsr fl_read_sector								; Request read. No need to change state
 		rts
 
+; ------------------------------------------------------------------------------------------------------------------------------
+
 fl_read_sector
 
 		lda fastload_request							; Remember the state that we need to return to
@@ -582,6 +590,9 @@ fl_read_sector
 		lda #5											; and then set ourselves to the track stepping/sector reading state
 		sta fastload_request
 														; FALLTHROUGH
+
+		; ----------------------------------------------------------------------------------------------------------------------
+
 fl_reading_sector
 		lda $d084										; Check if we are already on the correct track/side
 		cmp fl_current_track							; and if not, select/step as required
@@ -616,7 +627,7 @@ fl_on_correct_track
 		jmp fl_fdc_not_busy
 
 fl_not_prev_sector
-		lda #$40
+		lda #$40										; ISSUE ACTUAL READ COMMAND
 		sta $d081
 
 		lda fastload_request_stashed					; Now that we are finally reading the sector,
@@ -625,7 +636,7 @@ fl_not_prev_sector
 		rts
 
 fl_step_track
-		lda #3											; advance to next state
+		lda #3											; advance to next state (3=fl_read_file_block)
 		sta fastload_request
 														; FALL THROUGH
 
@@ -668,38 +679,38 @@ fl_on_second_side
 		jsr fl_select_side1
 		rts
 
+; ------------------------------------------------------------------------------------------------------------------------------
+
 fl_read_file_block
 														; We have a sector from the floppy drive.
 														; Work out which half and how many bytes, and copy them into place.
 
 		jsr fl_copy_sector_to_buffer					; Get sector from FDC
 
-		lda #254										; Assume full sector initially
+		sec
+		lda #$00										; Assume full sector initially (256 bytes)
+		sbc #$02										; subtract 2 for track and sector bytes
 		sta fl_bytes_to_copy
 
 		lda fl_file_next_sector							; Work out which half we care about
 		and #$01
+		bne fl_read_from_second_half					; odd next sector number, so second half
 
-		bne fl_read_from_second_half
-
-fl_read_from_first_half
-		lda #(>fastload_sector_buffer)+0
+		lda #(>fastload_sector_buffer)+0				; fl_read_from_first_half
 		sta fl_read_page+1
 		lda fastload_sector_buffer+1
 		sta fl_file_next_sector
 		lda fastload_sector_buffer+0
 		sta fl_file_next_track
-		bne fl_1st_half_full_sector						; if next track is 0 then this is a partial sector and 'sector' now becomes the number of bytes left in this sector
+		bne fl_dma_read_bytes							; if next track is 0 then this is a partial sector and 'sector' now becomes the number of bytes left in this sector
 
-fl_1st_half_partial_sector
-		lda fastload_sector_buffer+1
+		lda fastload_sector_buffer+1					; fl_1st_half_partial_sector. track is 0, so sector contains number of bytes left
+		sec												; subtract 1, because the byte that contains the size is included
+		sbc #$01
 		sta fl_bytes_to_copy	
-
 		lda #$00										; Mark end of loading
 		sta fastload_request
-
-fl_1st_half_full_sector
-		jmp fl_dma_read_bytes
+		bra fl_dma_read_bytes
 
 fl_read_from_second_half
 		lda #(>fastload_sector_buffer)+1
@@ -708,17 +719,17 @@ fl_read_from_second_half
 		sta fl_file_next_sector
 		lda fastload_sector_buffer+$100
 		sta fl_file_next_track
-		bne fl_2nd_half_full_sector						; if next track is 0 then this is a partial sector and 'sector' now becomes the number of bytes left in this sector
+		bne fl_dma_read_bytes							; if next track is 0 then this is a partial sector and 'sector' now becomes the number of bytes left in this sector
 
-fl_2nd_half_partial_sector
-		lda fastload_sector_buffer+$101
+		lda fastload_sector_buffer+$101					; fl_2nd_half_partial_sector. track is 0, so sector contains number of bytes left
+		sec												; subtract 1, because the byte that contains the size is included
+		sbc #$01
 		sta fl_bytes_to_copy
-
 		lda #$00										; Mark end of loading
 		sta fastload_request
+		bra fl_dma_read_bytes
 
-fl_2nd_half_full_sector
-														; FALLTHROUGH
+; ------------------------------------------------------------------------------------------------------------------------------
 
 fl_dma_read_bytes
 		lda fastload_address+3							; Update destination address
@@ -767,6 +778,8 @@ fl_dma_read_bytes
 
 		rts
 
+; ------------------------------------------------------------------------------------------------------------------------------
+
 fl_data_read_dmalist
 		.byte $0b										; F011A type list
 		.byte $81,$00									; Destination MB
@@ -782,6 +795,8 @@ fl_read_page
 		.byte $00										; sub-command
 		.word 0											; modulo (unused)
 		rts
+
+; ------------------------------------------------------------------------------------------------------------------------------
 
 fl_copy_sector_to_buffer
 		lda #$80										; Make sure FDC sector buffer is selected
@@ -806,3 +821,5 @@ fl_sector_read_dmalist
 		.byte $00										; Dest bank
 		.byte $00										; sub-command
 		.word 0											; modulo (unused)
+
+; ------------------------------------------------------------------------------------------------------------------------------
