@@ -119,6 +119,60 @@ FileName	.byte .sprintf("%s", fname), 0
 .endscope
 .endmacro
 
+.macro FLOPPY_IFFL_FAST_LOAD_INIT addr, fname
+.scope
+			bra :+
+FileName	.byte .sprintf("%s", fname), 0
+:			lda #<.loword(addr)
+			sta fastload_address+0
+			lda #>.loword(addr)
+			sta fastload_address+1
+			lda #<.hiword(addr)
+			sta fastload_address+2
+			lda #>.hiword(addr)
+			sta fastload_address+3
+			
+			ldx #<FileName
+			ldy #>FileName
+			jsr fl_set_filename
+
+			lda #$01										; Request fastload job
+			sta fastload_request
+			jsr fl_waiting
+.endscope
+.endmacro
+
+.macro FLOPPY_IFFL_FAST_LOAD addr
+.scope
+			lda #<.loword(addr)
+			sta fastload_address+0
+			lda #>.loword(addr)
+			sta fastload_address+1
+			lda #<.hiword(addr)
+			sta fastload_address+2
+			lda #>.hiword(addr)
+			sta fastload_address+3
+
+			inc fl_iffl_currentfile
+			lda fl_iffl_currentfile
+			asl
+			asl
+			tax
+			lda fastload_iffl_sizes+0,x
+			sta fl_iffl_sizeremaining+0
+			lda fastload_iffl_sizes+1,x
+			sta fl_iffl_sizeremaining+1
+			lda fastload_iffl_sizes+2,x
+			sta fl_iffl_sizeremaining+2
+			lda fastload_iffl_sizes+3,x
+			sta fl_iffl_sizeremaining+3
+
+			lda #$07
+			sta fastload_request
+			jsr fl_waiting
+.endscope
+.endmacro
+
 .macro FLOPPY_FAST_LOAD addr, char1, char2
 .scope
 			lda #<.loword(addr)

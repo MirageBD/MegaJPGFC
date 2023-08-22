@@ -137,15 +137,15 @@ entry_main
 
 		jsr fl_init
 		jsr fl_waiting
-		FLOPPY_FAST_LOAD uichars,			$30, $30
-		FLOPPY_FAST_LOAD glchars,			$30, $31
-		FLOPPY_FAST_LOAD uipal,				$30, $32
-		FLOPPY_FAST_LOAD sprites,			$30, $33
-		FLOPPY_FAST_LOAD kbsprites,			$30, $34
-		FLOPPY_FAST_LOAD spritepal,			$30, $35
-		FLOPPY_FAST_LOAD $0400,				$30, $36		; jpg_negmlo
-		FLOPPY_FAST_LOAD $0a00,				$30, $37
-		FLOPPY_FAST_LOAD $8100,				$30, $38
+		FLOPPY_IFFL_FAST_LOAD_INIT uichars, "ALLDATA"
+		FLOPPY_IFFL_FAST_LOAD glchars
+		FLOPPY_IFFL_FAST_LOAD uipal
+		FLOPPY_IFFL_FAST_LOAD sprites
+		FLOPPY_IFFL_FAST_LOAD kbsprites
+		FLOPPY_IFFL_FAST_LOAD spritepal
+		FLOPPY_IFFL_FAST_LOAD $0400
+		FLOPPY_IFFL_FAST_LOAD $0a00
+		FLOPPY_IFFL_FAST_LOAD $8100
 		jsr fl_exit
 
 main_restart

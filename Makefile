@@ -11,6 +11,8 @@ MAKE			= make
 CP				= cp
 MV				= mv
 RM				= rm -f
+CAT				= cat
+PACKIFFL		= packiffl
 
 SRC_DIR			= ./src
 UI_SRC_DIR		= ./src/ui
@@ -48,6 +50,16 @@ default: all
 
 OBJS = $(EXE_DIR)/boot.o $(EXE_DIR)/main.o
 
+BINFILES  = $(BIN_DIR)/font_chars1.bin
+BINFILES += $(BIN_DIR)/glyphs_chars1.bin
+BINFILES += $(BIN_DIR)/glyphs_pal1.bin
+BINFILES += $(BIN_DIR)/cursor_sprites1.bin
+BINFILES += $(BIN_DIR)/kbcursor_sprites1.bin
+BINFILES += $(BIN_DIR)/cursor_pal1.bin
+BINFILES += $(BIN_DIR)/data0a00.bin
+BINFILES += $(BIN_DIR)/data4000.bin
+BINFILES += $(BIN_DIR)/ycbcc2rgb.bin
+
 # % is a wildcard
 # $< is the first dependency
 # $@ is the target
@@ -56,19 +68,15 @@ OBJS = $(EXE_DIR)/boot.o $(EXE_DIR)/main.o
 # -----------------------------------------------------------------------------
 
 $(BIN_DIR)/font_chars1.bin: $(BIN_DIR)/font.bin
-	$(MC)
 	$(MC) $< cm1:1 d1:0 cl1:10000 rc1:0
 
 $(BIN_DIR)/glyphs_chars1.bin: $(BIN_DIR)/glyphs.bin
-	$(MC)
 	$(MC) $< cm1:1 d1:0 cl1:14000 rc1:0
 
 $(BIN_DIR)/cursor_sprites1.bin: $(BIN_DIR)/cursor.bin
-	$(MC)
 	$(MC) $< cm1:1 d1:0 cl1:14000 rc1:0 sm1:1
 
 $(BIN_DIR)/kbcursor_sprites1.bin: $(BIN_DIR)/kbcursor.bin
-	$(MC)
 	$(MC) $< cm1:1 d1:0 cl1:14000 rc1:0 sm1:1
 
 $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
@@ -123,20 +131,15 @@ $(EXE_DIR)/boot.prg: $(EXE_DIR)/boot.o Linkfile
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.map
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
 
-$(EXE_DIR)/megajpeg.d81: $(EXE_DIR)/boot.prg $(BIN_DIR)/font_chars1.bin $(BIN_DIR)/glyphs_chars1.bin $(BIN_DIR)/cursor_sprites1.bin $(BIN_DIR)/kbcursor_sprites1.bin
+$(BIN_DIR)/alldata.bin: $(BINFILES)
+	packiffl $(BINFILES) $(BIN_DIR)/alldata.bin
+
+$(EXE_DIR)/megajpeg.d81: $(EXE_DIR)/boot.prg $(BIN_DIR)/alldata.bin
 	$(RM) $@
 	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
 	 \
 	 -f "boot" -w $(EXE_DIR)/bootaddr.prg \
-	 -f "00" -w $(BIN_DIR)/font_chars1.bin \
-	 -f "01" -w $(BIN_DIR)/glyphs_chars1.bin \
-	 -f "02" -w $(BIN_DIR)/glyphs_pal1.bin \
-	 -f "03" -w $(BIN_DIR)/cursor_sprites1.bin \
-	 -f "04" -w $(BIN_DIR)/kbcursor_sprites1.bin \
-	 -f "05" -w $(BIN_DIR)/cursor_pal1.bin \
-	 -f "06" -w $(BIN_DIR)/data0a00.bin \
-	 -f "07" -w $(BIN_DIR)/data4000.bin \
-	 -f "08" -w $(BIN_DIR)/ycbcc2rgb.bin \
+	 -f "alldata" -w $(BIN_DIR)/alldata.bin \
 	$@
 
 # -----------------------------------------------------------------------------
