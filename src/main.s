@@ -137,15 +137,15 @@ entry_main
 
 		jsr fl_init
 		jsr fl_waiting
-		FLOPPY_IFFL_FAST_LOAD_INIT uichars, "ALLDATA"
+		FLOPPY_IFFL_FAST_LOAD_INIT uichars, "MEGAJPG.IFFL"
 		FLOPPY_IFFL_FAST_LOAD glchars
 		FLOPPY_IFFL_FAST_LOAD uipal
 		FLOPPY_IFFL_FAST_LOAD sprites
 		FLOPPY_IFFL_FAST_LOAD kbsprites
 		FLOPPY_IFFL_FAST_LOAD spritepal
-		FLOPPY_IFFL_FAST_LOAD $0400
-		FLOPPY_IFFL_FAST_LOAD $0a00
-		FLOPPY_IFFL_FAST_LOAD $8100
+		FLOPPY_IFFL_FAST_LOAD $0400						; data0a00.bin
+		FLOPPY_IFFL_FAST_LOAD $0a00						; data4000.bin
+		FLOPPY_IFFL_FAST_LOAD $8100						; ycbcc2rgb.bin
 		jsr fl_exit
 
 main_restart

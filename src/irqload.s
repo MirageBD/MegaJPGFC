@@ -158,6 +158,8 @@ fastload_irq_handler
 		tya
 		pha
 
+		inc $d020
+
 		; nop
 
 		pla
@@ -624,27 +626,37 @@ fl_iffl_read_file_block
 		lda fl_iffl_sizeremaining+1
 		bne fl_iffl_fullcopy
 		sec
-		lda #0
+		lda #0											; (256 - counter) > sizeremaining?
 		sbc fl_iffl_bytecounter
 		sec
 		sbc fl_iffl_sizeremaining+0
-		bcc fl_iffl_fullcopy
+		bcc fl_iffl_fullcopy							; yes, copy remaining buffer
 
-fl_iffl_partialcopy
+fl_iffl_partialcopy										; no, copy until remaining size
+
+		lda fl_file_next_sector							; Work out which half we care about
+		and #$01
+		bne fl_iffl_partial_read_from_second_half		; odd next sector number, so second half
+		lda #(>fastload_sector_buffer)+0
+		sta fl_read_page+1
+		bra fl_iffl_dopartialcopy
+fl_iffl_partial_read_from_second_half
+		lda #(>fastload_sector_buffer)+1
+		sta fl_read_page+1
+
+fl_iffl_dopartialcopy
 
 		lda fl_iffl_sizeremaining+0
 		sta fl_bytes_to_copy
-
-		lda #$00										; Mark end of loading
-		sta fastload_request
-		jsr fl_iffl_performcopy
 
 		clc
 		lda fl_iffl_bytecounter
 		adc fl_bytes_to_copy
 		sta fl_iffl_bytecounter
 
-		;jsr fl_read_next_sector							; Schedule reading of next block
+		lda #$00										; Mark end of loading
+		sta fastload_request
+		jsr fl_iffl_performcopy
 
 		rts
 
@@ -691,6 +703,8 @@ fl_iffl_dma_read_bytes
 		sbc #0
 		sta fl_iffl_sizeremaining+3
 
+		lda fl_iffl_bytecounter							; set offset for DMA copy
+		sta fl_read_page+0
 		jsr fl_iffl_performcopy
 
 		clc
@@ -707,9 +721,6 @@ fl_iffl_dma_read_bytes
 		rts
 
 fl_iffl_performcopy
-
-		lda fl_iffl_bytecounter							; set offset for DMA copy
-		sta fl_read_page+0
 
 		lda fastload_address+3							; Update destination address
 		asl

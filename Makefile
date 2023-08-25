@@ -134,30 +134,30 @@ $(EXE_DIR)/boot.prg: $(EXE_DIR)/boot.o Linkfile
 $(BIN_DIR)/alldata.bin: $(BINFILES)
 	packiffl $(BINFILES) $(BIN_DIR)/alldata.bin
 
-$(EXE_DIR)/megajpeg.d81: $(EXE_DIR)/boot.prg $(BIN_DIR)/alldata.bin
+$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg $(BIN_DIR)/alldata.bin
 	$(RM) $@
 	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
 	 \
-	 -f "boot" -w $(EXE_DIR)/bootaddr.prg \
-	 -f "alldata" -w $(BIN_DIR)/alldata.bin \
+	 -f "megajpg" -w $(EXE_DIR)/bootaddr.prg \
+	 -f "megajpg.iffl" -w $(BIN_DIR)/alldata.bin \
 	$@
 
 # -----------------------------------------------------------------------------
 
-run: $(EXE_DIR)/megajpeg.d81
+run: $(EXE_DIR)/megajpg.d81
 
 ifeq ($(megabuild), 1)
 
 ifeq ($(useetherload), 1)
 
-	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpeg.d81 megajpg.d81" -c "quit"
+	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megajpg.d81" -c "quit"
 	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/bootaddr.prg
 #	$(EL) -b 02001 --offset ff --jump 2100 $(EXE_DIR)/boot.prg
 
 else
 
 	mega65_ftp.exe -l COM3 -s 2000000 -c "cd /" \
-	-c "put D:\Mega\MegaJPGFC\exe\megajpeg.d81 megajpg.d81"
+	-c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megjpg.d81"
 
 	m65 -l COM3 -F
 	m65 -l COM3 -T 'list'
@@ -180,7 +180,7 @@ endif
 else
 
 #	cmd.exe /c $(XMEGA65) -mastervolume 50 -autoload -8 $(EXE_DIR)/disk.d81
-	cmd.exe /c $(XMEGA65) -autoload -8 $(EXE_DIR)/megajpeg.d81
+	cmd.exe /c $(XMEGA65) -autoload -8 $(EXE_DIR)/megajpg.d81
 
 endif
 
