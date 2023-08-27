@@ -38,6 +38,7 @@ MEGAMOD			= MegaMod
 EL				= etherload -i 192.168.1.255
 XMEGA65			= H:\xemu\xmega65.exe
 MEGAFTP			= mega65_ftp -i 192.168.1.255
+MEGAIFFL		= megaiffl
 
 CONVERTBREAK	= 's/al [0-9A-F]* \.br_\([a-z]*\)/\0\nbreak \.br_\1/'
 CONVERTWATCH	= 's/al [0-9A-F]* \.wh_\([a-z]*\)/\0\nwatch store \.wh_\1/'
@@ -132,7 +133,7 @@ $(EXE_DIR)/boot.prg: $(EXE_DIR)/boot.o Linkfile
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
 
 $(BIN_DIR)/alldata.bin: $(BINFILES)
-	packiffl $(BINFILES) $(BIN_DIR)/alldata.bin
+	$(MEGAIFFL) $(BINFILES) $(BIN_DIR)/alldata.bin
 
 $(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg $(BIN_DIR)/alldata.bin
 	$(RM) $@

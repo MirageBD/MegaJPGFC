@@ -159,6 +159,11 @@ fastload_irq_handler
 		pha
 
 		inc $d020
+		inc $d021
+
+		lda $d012
+		adc #$20
+		sta $d012
 
 		; nop
 
