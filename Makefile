@@ -94,6 +94,7 @@ $(BIN_DIR)/kbcursor_sprites1.bin: $(BIN_DIR)/kbcursor.bin
 $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
 					$(SRC_DIR)/main.s \
 					$(SRC_DIR)/irqload.s \
+					$(SRC_DIR)/decruncher.s \
 					$(SRC_DIR)/macros.s \
 					$(SRC_DIR)/mathmacros.s \
 					$(SRC_DIR)/jpg.s \
@@ -137,20 +138,29 @@ $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
 					Makefile Linkfile
 	$(AS) $(ASFLAGS) -o $@ $<
 
-$(EXE_DIR)/boot.prg: $(EXE_DIR)/boot.o Linkfile
+$(EXE_DIR)/boot.prg.addr: $(EXE_DIR)/boot.o Linkfile
 	$(LD) -Ln $(EXE_DIR)/boot.maptemp --dbgfile $(EXE_DIR)/boot.dbg -C Linkfile -o $@ $(EXE_DIR)/boot.o
-	$(MEGAADDRESS) $(EXE_DIR)/boot.prg $(EXE_DIR)/bootaddr.prg 2001
+	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 2001
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.map
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
 
-$(BIN_DIR)/alldata.bin: $(BINFILES)
-	$(MEGAIFFL) $(BINFILES) $(BIN_DIR)/alldata.bin
+$(BIN_DIR)/alldata.bin: $(BINFILESADDR)
+	$(MEGAADDRESS) $(BIN_DIR)/font_chars1.bin       00010000
+	$(MEGAADDRESS) $(BIN_DIR)/glyphs_chars1.bin     00014000
+	$(MEGAADDRESS) $(BIN_DIR)/glyphs_pal1.bin       0000c700
+	$(MEGAADDRESS) $(BIN_DIR)/cursor_sprites1.bin   0000ce00
+	$(MEGAADDRESS) $(BIN_DIR)/kbcursor_sprites1.bin 0000cf00
+	$(MEGAADDRESS) $(BIN_DIR)/cursor_pal1.bin       0000ca00
+	$(MEGAADDRESS) $(BIN_DIR)/data0a00.bin          00000400
+	$(MEGAADDRESS) $(BIN_DIR)/data4000.bin          00000a00
+	$(MEGAADDRESS) $(BIN_DIR)/ycbcc2rgb.bin         00008100
+	$(MEGAIFFL) $(BINFILESADDR) $(BIN_DIR)/alldata.bin
 
-$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg $(BIN_DIR)/alldata.bin
+$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr $(BIN_DIR)/alldata.bin
 	$(RM) $@
 	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
 	 \
-	 -f "megajpg" -w $(EXE_DIR)/bootaddr.prg \
+	 -f "megajpg" -w $(EXE_DIR)/boot.prg.addr \
 	 -f "megajpg.iffl" -w $(BIN_DIR)/alldata.bin \
 	$@
 
@@ -163,7 +173,7 @@ ifeq ($(megabuild), 1)
 ifeq ($(useetherload), 1)
 
 	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megajpg.d81" -c "quit"
-	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/bootaddr.prg
+	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/boot.prg.addr
 #	$(EL) -b 02001 --offset ff --jump 2100 $(EXE_DIR)/boot.prg
 
 else

@@ -3,15 +3,15 @@
 ; call: Y = AddrLo
 ;       X = AddrHi
 
-zp_base	= $02			; -
-bits	= zp_base		; 1
-put		= zp_base+2		; 2
+dc_base		= $02			; -
+dc_bits		= dc_base		; 1
+dc_put		= dc_base+2		; 2
 
 ; -----------------------------------------------------------------------------------------------
 
 .macro DECRUNCH_GETNEXTBIT
 .scope
-		asl bits
+		asl dc_bits
 		bne decrunch_getnextbit_end
 		jsr decrunch_getnewbits
 decrunch_getnextbit_end
@@ -32,15 +32,18 @@ decrunch_getlen_end
 .endmacro
 
 decrunch_getnewbits
-get1	ldy $feed,x
-		sty bits
-		rol bits
+
+dc_get1	ldy $feed,x
+		sty dc_bits
+		rol dc_bits
 		inx
-		bne gnbend
-gnbinc	inc get1+2
-		inc get2+2
-		inc get3+2
-gnbend	rts
+		bne dc_getnewbits_end
+dc_getnewbits_inc
+		inc dc_get1+2
+		inc dc_get2+2
+		inc dc_get3+2
+dc_getnewbits_end
+		rts
 
 decrunch_tab
 		.byte %11011111 ;  3							; short offsets
@@ -56,54 +59,56 @@ decrunch_tab
 ; -----------------------------------------------------------------------------------------------
 
 decrunch
-		sty get1+1
-		stx get1+2
-		sty get2+1
-		stx get2+2
-		sty get3+1
-		stx get3+2
+		sty dc_get1+1
+		stx dc_get1+2
+		sty dc_get2+1
+		stx dc_get2+2
+		sty dc_get3+1
+		stx dc_get3+2
 
 		ldx #0											; get start address
 :		jsr decrunch_getnewbits
-		sty put-1,x										; x already 1 at this point, so subtract 1
+		sty dc_put-1,x									; x already 1 at this point, so subtract 1
 		cpx #2
 		bcc :-
 
 		lda #%10000000									; signal that new byte needs fetching
-		sta bits
+		sta dc_bits
 
-dloop	DECRUNCH_GETNEXTBIT
-		bcs match
+dc_loop	DECRUNCH_GETNEXTBIT
+		bcs dc_match
 
-literal	DECRUNCH_GETLEN									; literal run - get length.
-		sta llen+1
+dc_literal
+		DECRUNCH_GETLEN									; literal run - get length.
+		sta dc_llen+1
 
 		ldy #0
-lloop
-get3	lda $feed,x
+dc_literalloop
+dc_get3	lda $feed,x
 		inx
 		bne :+
-		jsr gnbinc
-:		sta (put+0),y
+		jsr dc_getnewbits_inc
+:		sta (dc_put+0),y
 		iny
-llen	cpy #0
-		bne lloop
+dc_llen	cpy #0
+		bne dc_literalloop
 
 		clc
 		tya
-		adc put+0
-		sta put+0
+		adc dc_put+0
+		sta dc_put+0
 		bcc :+
-		inc put+1
+		inc dc_put+1
 
 :		iny
-		beq dloop
+		beq dc_loop
 
-match	DECRUNCH_GETLEN									; has to continue with a match - get length.
-		sta mlen+1
+dc_match
+		DECRUNCH_GETLEN									; has to continue with a match - get length.
+		sta dc_mlen+1
 
 		cmp #$ff										; length 255 -> EOF
-		beq end
+		beq decrunch_end
 
 		cmp #2											; get num bits
 		lda #0
@@ -119,40 +124,44 @@ match	DECRUNCH_GETLEN									; has to continue with a match - get length.
 :		DECRUNCH_GETNEXTBIT								; get bits < 8
 		rol
 		bcs :-
-		bmi mshort
+		bmi dc_mshort
 :		eor #$ff										; get byte
 		tay
-get2	lda $feed,x
+dc_get2	lda $feed,x
 		inx
 		bne :+
-		jsr gnbinc
-:		jmp mdone
+		jsr dc_getnewbits_inc
+:		jmp dc_mdone
 
-mshort	ldy #$ff
+dc_mshort
+		ldy #$ff
 
-mdone	;clc
-		adc put+0
-		sta mlda+1
+dc_mdone
+		;clc
+		adc dc_put+0
+		sta dc_mlda+1
 		tya
-		adc put+1
-		sta mlda+2
+		adc dc_put+1
+		sta dc_mlda+2
 
 		ldy #$ff
-mloop	iny
-mlda	lda $beef,y
-		sta (put+0),y
-mlen	cpy #0
-		bne mloop
+dc_mloop
+		iny
+dc_mlda	lda $beef,y
+		sta (dc_put+0),y
+dc_mlen	cpy #0
+		bne dc_mloop
 
 		;sec
 		tya
-		adc put+0
-		sta put+0
+		adc dc_put+0
+		sta dc_put+0
 		bcc :+
-		inc put+1
+		inc dc_put+1
 
-:		jmp dloop
+:		jmp dc_loop
 
-end		rts
+decrunch_end
+		rts
 
 ; -----------------------------------------------------------------------------------------------

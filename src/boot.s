@@ -32,7 +32,7 @@ basicend	.byte 0
 .include "jpgrender.s"
 .include "irqload.s"
 
-;.include "decruncher.s"
+.include "decruncher.s"
 
 .include "drivers/mouse.s"
 .include "drivers/sdc.s"

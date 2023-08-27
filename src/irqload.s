@@ -240,6 +240,11 @@ fastload_directory_entries
 		.byte 0
 .endrepeat
 
+fastload_iffl_addresses
+.repeat 256
+		.byte 0
+.endrepeat
+
 fl_iffl_numfiles
 		.byte 0
 
@@ -552,8 +557,10 @@ fl_iffl_read_file_block_init
 
 		lda fastload_sector_buffer+2					; read number of file entries in iffl from first sector
 		sta fl_iffl_numfiles
-		ldy #$00
+
 		ldx #$00
+
+		ldy #$00
 :		lda fastload_sector_buffer+3,x					; get sizes for files in iffl
 		sta fastload_iffl_sizes+0,x
 		lda fastload_sector_buffer+4,x
@@ -569,13 +576,33 @@ fl_iffl_read_file_block_init
 		iny
 		cpy fl_iffl_numfiles
 		bne :-
+
+		ldy #$00
+:		lda fastload_sector_buffer+3,x					; get start addresses for files in iffl
+		sta fastload_iffl_addresses+0,x
+		lda fastload_sector_buffer+4,x
+		sta fastload_iffl_addresses+1,x
+		lda fastload_sector_buffer+5,x
+		sta fastload_iffl_addresses+2,x
+		lda fastload_sector_buffer+6,x
+		sta fastload_iffl_addresses+3,x
+		inx
+		inx
+		inx
+		inx
+		iny
+		cpy fl_iffl_numfiles
+		bne :-
+
 		jmp fl_iffl_read_file_block_init_end
 
 fl_iffl_init_read_from_second_half
 		lda fastload_sector_buffer+$102					; read number of file entries in iffl from second sector
 		sta fl_iffl_numfiles
-		ldy #$00
+
 		ldx #$00
+
+		ldy #$00
 :		lda fastload_sector_buffer+$103,x				; get sizes for files in iffl
 		sta fastload_iffl_sizes+0,x
 		lda fastload_sector_buffer+$104,x
@@ -591,12 +618,31 @@ fl_iffl_init_read_from_second_half
 		iny
 		cpy fl_iffl_numfiles
 		bne :-
+
+		ldy #$00
+:		lda fastload_sector_buffer+$103,x				; get sizes for files in iffl
+		sta fastload_iffl_addresses+0,x
+		lda fastload_sector_buffer+$104,x
+		sta fastload_iffl_addresses+1,x
+		lda fastload_sector_buffer+$105,x
+		sta fastload_iffl_addresses+2,x
+		lda fastload_sector_buffer+$106,x
+		sta fastload_iffl_addresses+3,x
+		inx
+		inx
+		inx
+		inx
+		iny
+		cpy fl_iffl_numfiles
+		bne :-
+
 		jmp fl_iffl_read_file_block_init_end
 
 fl_iffl_read_file_block_init_end
 
-		clc												; set iffl byte counter to 1(nexttrack)+1(nextsector)+1(numfiles)+numfiles*4
+		clc												; set iffl byte counter to 1(nexttrack)+1(nextsector)+1(numfiles)+numfiles*8
 		lda fl_iffl_numfiles
+		asl
 		asl
 		asl
 		adc #$03
