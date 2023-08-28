@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 
-megabuild		= 1
+megabuild		= 0
 useetherload	= 1
 finalbuild		= 1
 attachdebugger	= 0
@@ -71,6 +71,16 @@ BINFILESADDR += $(BIN_DIR)/cursor_pal1.bin.addr
 BINFILESADDR += $(BIN_DIR)/data0a00.bin.addr
 BINFILESADDR += $(BIN_DIR)/data4000.bin.addr
 BINFILESADDR += $(BIN_DIR)/ycbcc2rgb.bin.addr
+
+BINFILESMC  = $(BIN_DIR)/font_chars1.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/glyphs_chars1.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/glyphs_pal1.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/cursor_sprites1.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/kbcursor_sprites1.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/cursor_pal1.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/data0a00.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/data4000.bin.addr.mc
+BINFILESMC += $(BIN_DIR)/ycbcc2rgb.bin.addr.mc
 
 # % is a wildcard
 # $< is the first dependency
@@ -154,7 +164,16 @@ $(BIN_DIR)/alldata.bin: $(BINFILES)
 	$(MEGAADDRESS) $(BIN_DIR)/data0a00.bin          00000400
 	$(MEGAADDRESS) $(BIN_DIR)/data4000.bin          00000a00
 	$(MEGAADDRESS) $(BIN_DIR)/ycbcc2rgb.bin         00008100
-	$(MEGAIFFL) $(BINFILESADDR) $(BIN_DIR)/alldata.bin
+	$(MEGACRUNCH) $(BIN_DIR)/font_chars1.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/glyphs_chars1.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/glyphs_pal1.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/cursor_sprites1.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/kbcursor_sprites1.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/cursor_pal1.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/data0a00.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/data4000.bin.addr
+	$(MEGACRUNCH) $(BIN_DIR)/ycbcc2rgb.bin.addr
+	$(MEGAIFFL) $(BINFILESMC) $(BIN_DIR)/alldata.bin
 
 $(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr $(BIN_DIR)/alldata.bin
 	$(RM) $@

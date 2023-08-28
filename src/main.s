@@ -140,6 +140,13 @@ entry_main
 
 		FLOPPY_IFFL_FAST_LOAD_INIT "MEGAJPG.IFFL"
 		FLOPPY_IFFL_FAST_LOAD ; uichars
+
+		jsr decrunch
+
+		lda #$08
+:		sta $d020
+		jmp :-
+
 		FLOPPY_IFFL_FAST_LOAD ; glchars
 		FLOPPY_IFFL_FAST_LOAD ; uipal
 		FLOPPY_IFFL_FAST_LOAD ; sprites
