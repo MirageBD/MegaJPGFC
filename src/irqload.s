@@ -234,13 +234,8 @@ fastload_sector_buffer
 		.byte 0
 .endrepeat
 
-fastload_iffl_sizes
+fastload_iffl_start_address_and_size
 fastload_directory_entries
-.repeat 256
-		.byte 0
-.endrepeat
-
-fastload_iffl_addresses
 .repeat 256
 		.byte 0
 .endrepeat
@@ -561,35 +556,26 @@ fl_iffl_read_file_block_init
 		ldx #$00
 
 		ldy #$00
-:		lda fastload_sector_buffer+3,x					; get sizes for files in iffl
-		sta fastload_iffl_sizes+0,x
-		lda fastload_sector_buffer+4,x
-		sta fastload_iffl_sizes+1,x
-		lda fastload_sector_buffer+5,x
-		sta fastload_iffl_sizes+2,x
-		lda fastload_sector_buffer+6,x
-		sta fastload_iffl_sizes+3,x
-		inx
-		inx
-		inx
-		inx
-		iny
-		cpy fl_iffl_numfiles
-		bne :-
-
-		ldy #$00
-:		lda fastload_sector_buffer+3,x					; get start addresses for files in iffl
-		sta fastload_iffl_addresses+0,x
-		lda fastload_sector_buffer+4,x
-		sta fastload_iffl_addresses+1,x
-		lda fastload_sector_buffer+5,x
-		sta fastload_iffl_addresses+2,x
-		lda fastload_sector_buffer+6,x
-		sta fastload_iffl_addresses+3,x
-		inx
-		inx
-		inx
-		inx
+:		lda fastload_sector_buffer+$003,x					; get start addresses for files in iffl
+		sta fastload_iffl_start_address_and_size+0,x
+		lda fastload_sector_buffer+$004,x
+		sta fastload_iffl_start_address_and_size+1,x
+		lda fastload_sector_buffer+$005,x
+		sta fastload_iffl_start_address_and_size+2,x
+		lda fastload_sector_buffer+$006,x
+		sta fastload_iffl_start_address_and_size+3,x
+		lda fastload_sector_buffer+$007,x					; get sizes for files in iffl
+		sta fastload_iffl_start_address_and_size+4,x
+		lda fastload_sector_buffer+$008,x
+		sta fastload_iffl_start_address_and_size+5,x
+		lda fastload_sector_buffer+$009,x
+		sta fastload_iffl_start_address_and_size+6,x
+		lda fastload_sector_buffer+$00a,x
+		sta fastload_iffl_start_address_and_size+7,x
+		clc
+		txa
+		adc #$08
+		tax
 		iny
 		cpy fl_iffl_numfiles
 		bne :-
@@ -603,35 +589,26 @@ fl_iffl_init_read_from_second_half
 		ldx #$00
 
 		ldy #$00
-:		lda fastload_sector_buffer+$103,x				; get sizes for files in iffl
-		sta fastload_iffl_sizes+0,x
+:		lda fastload_sector_buffer+$103,x				; get start addresses for files in iffl
+		sta fastload_iffl_start_address_and_size+0,x
 		lda fastload_sector_buffer+$104,x
-		sta fastload_iffl_sizes+1,x
+		sta fastload_iffl_start_address_and_size+1,x
 		lda fastload_sector_buffer+$105,x
-		sta fastload_iffl_sizes+2,x
+		sta fastload_iffl_start_address_and_size+2,x
 		lda fastload_sector_buffer+$106,x
-		sta fastload_iffl_sizes+3,x
-		inx
-		inx
-		inx
-		inx
-		iny
-		cpy fl_iffl_numfiles
-		bne :-
-
-		ldy #$00
-:		lda fastload_sector_buffer+$103,x				; get sizes for files in iffl
-		sta fastload_iffl_addresses+0,x
-		lda fastload_sector_buffer+$104,x
-		sta fastload_iffl_addresses+1,x
-		lda fastload_sector_buffer+$105,x
-		sta fastload_iffl_addresses+2,x
-		lda fastload_sector_buffer+$106,x
-		sta fastload_iffl_addresses+3,x
-		inx
-		inx
-		inx
-		inx
+		sta fastload_iffl_start_address_and_size+3,x
+		lda fastload_sector_buffer+$107,x				; get sizes for files in iffl
+		sta fastload_iffl_start_address_and_size+4,x
+		lda fastload_sector_buffer+$108,x
+		sta fastload_iffl_start_address_and_size+5,x
+		lda fastload_sector_buffer+$109,x
+		sta fastload_iffl_start_address_and_size+6,x
+		lda fastload_sector_buffer+$10a,x
+		sta fastload_iffl_start_address_and_size+7,x
+		clc
+		txa
+		adc #$08
+		tax
 		iny
 		cpy fl_iffl_numfiles
 		bne :-
@@ -648,21 +625,30 @@ fl_iffl_read_file_block_init_end
 		adc #$03
 		sta fl_iffl_bytecounter
 
-		lda #$00
-		sta fl_iffl_currentfile
-		asl
-		asl
-		tax
-		lda fastload_iffl_sizes+0,x
+		ldx #$00
+		stx fl_iffl_currentfile
+
+		lda fastload_iffl_start_address_and_size+0
+		sta fastload_address+0
+		lda fastload_iffl_start_address_and_size+1
+		sta fastload_address+1
+		lda fastload_iffl_start_address_and_size+2
+		sta fastload_address+2
+		lda fastload_iffl_start_address_and_size+3
+		sta fastload_address+3
+		lda fastload_iffl_start_address_and_size+4
 		sta fl_iffl_sizeremaining+0
-		lda fastload_iffl_sizes+1,x
+		lda fastload_iffl_start_address_and_size+5
 		sta fl_iffl_sizeremaining+1
-		lda fastload_iffl_sizes+2,x
+		lda fastload_iffl_start_address_and_size+6
 		sta fl_iffl_sizeremaining+2
-		lda fastload_iffl_sizes+3,x
+		lda fastload_iffl_start_address_and_size+7
 		sta fl_iffl_sizeremaining+3
 
-		; fallthrough
+		lda #$00										; Mark end of loading
+		sta fastload_request
+
+		rts
 
 ; ------------------------------------------------------------------------------------------------------------------------------
 

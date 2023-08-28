@@ -139,12 +139,12 @@ $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
 	$(AS) $(ASFLAGS) -o $@ $<
 
 $(EXE_DIR)/boot.prg.addr: $(EXE_DIR)/boot.o Linkfile
-	$(LD) -Ln $(EXE_DIR)/boot.maptemp --dbgfile $(EXE_DIR)/boot.dbg -C Linkfile -o $@ $(EXE_DIR)/boot.o
+	$(LD) -Ln $(EXE_DIR)/boot.maptemp --dbgfile $(EXE_DIR)/boot.dbg -C Linkfile -o $(EXE_DIR)/boot.prg $(EXE_DIR)/boot.o
 	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 2001
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.map
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
 
-$(BIN_DIR)/alldata.bin: $(BINFILESADDR)
+$(BIN_DIR)/alldata.bin: $(BINFILES)
 	$(MEGAADDRESS) $(BIN_DIR)/font_chars1.bin       00010000
 	$(MEGAADDRESS) $(BIN_DIR)/glyphs_chars1.bin     00014000
 	$(MEGAADDRESS) $(BIN_DIR)/glyphs_pal1.bin       0000c700
