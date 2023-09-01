@@ -140,11 +140,6 @@ entry_main
 
 		FLOPPY_IFFL_FAST_LOAD_INIT "MEGAJPG.IFFL"
 		FLOPPY_IFFL_FAST_LOAD ; uipal
-
-		lda #$08
-:		sta $d020
-		jmp :-
-
 		FLOPPY_IFFL_FAST_LOAD ; uichars
 		FLOPPY_IFFL_FAST_LOAD ; glchars
 		FLOPPY_IFFL_FAST_LOAD ; sprites
@@ -153,7 +148,6 @@ entry_main
 		FLOPPY_IFFL_FAST_LOAD ; $0400						; data0a00.bin
 		FLOPPY_IFFL_FAST_LOAD ; $0a00						; data4000.bin
 		FLOPPY_IFFL_FAST_LOAD ; $8100						; ycbcc2rgb.bin
-
 		jsr fl_exit
 
 main_restart

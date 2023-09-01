@@ -275,13 +275,6 @@ dc_mdst	.word $0000										; dst
 		ldy dc_mlen
 		jsr addput
 
-		ldx dc_msrc+1
-		cpx #$40
-		bmi :+
-		inc $d020
-		jmp *-3
-
-:
 		;beq dc_end
 		jmp dloop
 
