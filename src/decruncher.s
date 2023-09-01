@@ -2,10 +2,47 @@
 
 dc_base		= $02				; -
 dc_bits		= dc_base			; 1
-dc_put		= dc_base+2			; 4
-dc_get_zp1	= dc_base+2+4		; 4
-dc_get_zp2	= dc_base+2+4+4		; 4
-dc_get_zp3	= dc_base+2+4+4+4	; 4
+dc_get_zp	= dc_base+2			; 4
+
+; original data
+
+; FF FF FF FF FF FF FF FF FF FF 08 FE FE 08 FF FF
+; FF 08 FE 08 08 FE 08 FF FF FE 08 08 FE FF FE FF
+; FF FE 08 FF 08 FE FE FF FF 08 FE 08 FF FF FF FF
+; FF FF 08 FE FE FE 08 FF FF FF FF FF FF FF FF FF
+; FF FF FF FF FF FF FF FF FF FF FF 08 FE 08 FF FF
+; FF FF FF FE 08 FE FF FF FF FF 08 FE FF FE 08 FF
+; FF FF FE 08 FF 08 FE FF FF 08 FE FE FE FE FE 08
+; FF FE 08 FF FF FF 08 FE FF FF FF FF FF FF FF FF
+; FF FF FF FF FF FF FF FF FF FE FE FE FE FE 08 FF
+
+; compressed data
+
+; 0001372A
+
+; 00 00 01 00 2A FF 1E A6 08 FE FE 08 26 16 1B 03
+; 89 87 C4 73 9B 47 46 A3 63 E1 7D 8F F9 BD 04 FE
+; B0 3C C4 F1 7F B3 27 98 FE 26 FE 65 FF FF
+
+
+; 2A    0 0 1 0 1 0 1 0
+; FF    1 1 1 1 1 1 1 1
+; 1E    0 0 0 1 1 1 1 0
+; A6    1 0 1 0 0 1 1 0
+; 08    0 0 0 0 1 0 0 0
+; FE    1 1 1 1 1 1 1 0
+; FE    1 1 1 1 1 1 1 0
+; 08    0 0 0 0 1 0 0 0
+; 26    0 0 1 0 0 1 1 0
+; 16    0 0 0 1 0 1 1 0
+; 1B    0 0 0 1 1 0 1 1
+; 03    0 0 0 0 0 0 1 1
+; 89    1 0 0 0 1 0 0 1
+; 87    1 0 0 0 0 1 1 1
+; C4    1 1 0 0 0 1 0 0
+; 73    0 1 1 1 0 0 1 1
+; 9B    1 0 0 1 1 0 1 1
+; 47    0 1 0 0 0 1 1 1
 
 ; ----------------------------------------------------
 
@@ -17,6 +54,9 @@ dc_get_zp3	= dc_base+2+4+4+4	; 4
 
 ; $0000: Lit(1, F)
 ; $0001: Mat(1, 9, F)
+; $000a: Lit(4, F)
+; $000e: Mat(7, 4, F)
+; $0012: Mat(6, 2, T)
 
 ; ----------------------------------------------------
 
@@ -36,207 +76,218 @@ dc_get_zp3	= dc_base+2+4+4+4	; 4
 
 ; GETLEN (because next sequence should be a match)
 
-;          A = 1
-; asl      10101010
-;          01010100 c = 1          carry is one, continue adding to A
-; asl      01010100
-;          10101000 c = 0
-; rol      A = 2                   7th bit 1, so continue
-; asl      10101000
-;          01010000 c = 1          carry is one, continue adding to A
-; asl      01010000
-;          10100000 c = 0
-; rol      A = 4                   7th bit 1, so continue
-; asl      10100000
-;          01000000 c = 1          carry is one, continue adding to A
-; asl      01000000
-;          10000000 c = 0
-; rol      A = 8                   7th bit 1, so continue
-; asl      10000000
-;          00000000 c = 0
-;                                  dc_bits = 0 -> fetch next bits
+;              A = 1
+; asl bits     10101000
+;              01010100 c = 1          carry is one, continue adding to A
+; asl bits     01010100
+;              10101000 c = 0
+; rol          A = 2                   7th bit 1, so continue
+; asl bits     10101000
+;              01010000 c = 1          carry is one, continue adding to A
+; asl bits     01010000
+;              10100000 c = 0
+; rol          A = 4                   7th bit 1, so continue
+; asl bits     10100000
+;              01000000 c = 1          carry is one, continue adding to A
+; asl bits     01000000
+;              10000000 c = 0
+; rol          A = 8                   7th bit 1, so continue
+; asl bits     10000000
+;              00000000 c = 0
+;                                    dc_bits = 0 -> fetch next bits
 ; 
+;              A = 8
+;              00011110
+; rol bits 0 < 00111100
 
 ; -----------------------------------------------------------------------------------------------
 
-.macro DECRUNCH_GETNEXTBIT
-.scope
-		asl dc_bits
-		bne :+											; if dc_bits is empty, fetch new data
-		jsr decrunch_getnewbits
-:
-.endscope
-.endmacro
+addput	clc
+		tya
+		adc dc_ldst+0
+		sta dc_ldst+0
+		bcc :+
+		inc dc_ldst+1
 
-.macro DECRUNCH_GETLEN
-.scope
-		lda #1
-decrunch_getlen_loop
-		DECRUNCH_GETNEXTBIT
-		bcc decrunch_getlen_end							; was the bit we just scrolled out 0?
-		DECRUNCH_GETNEXTBIT								; nope, get next bit
-		rol												; and scroll into length
-		bpl decrunch_getlen_loop						; if the 7th bit is 1, continue getting length?
-decrunch_getlen_end
-.endscope
-.endmacro
+:		clc
+		tya
+		adc dc_mdst+0
+		sta dc_mdst+0
+		bcc :+
+		inc dc_mdst+1
+:		rts
 
-decrunch_getnewbits
-dc_get1	pha
-		lda [dc_get_zp1],z
-		sta dc_bits
-		rol dc_bits
-		inz
-		inx
-		bne dc_getnewbits_end
-dc_getnewbits_inc
-		inc dc_get_zp1+1
-		inc dc_get_zp2+1
-		inc dc_get_zp2+1
-dc_getnewbits_end
-		pla
+addget 	clc
+		tya
+		adc dc_get_zp+0
+		sta dc_get_zp+0
+		bcc :+
+		inc dc_get_zp+1
+:		rts
+
+getlen	lda #1
+glloop	jsr getnextbit
+		bcc glend
+		jsr rolnextbit									; if next bit is 1 then ROL the next-next bit into A
+		bpl glloop										; if the highest bit is now still 0, continue. this means highest len is 255
+glend	rts
+
+rolnextbit
+		jsr getnextbit
+		rol												; rol sets N flag
 		rts
 
-decrunch_tab
-		.byte %11011111 ;  3							; short offsets
-		.byte %11111011 ;  6
-		.byte %00000000 ;  8
+getnextbit
+		asl dc_bits
+		bne dgend
+		pha
+		jsr getnextbyte
+		rol
+		sta dc_bits
+		pla
+dgend	rts
+
+getnextbyte
+		lda [dc_get_zp],z
+		inc dc_get_zp+0
+		bne :+
+		inc dc_get_zp+1
+		bne :+
+		inc dc_get_zp+2
+:		rts
+
+; -----------------------------------------------------------------------------------------------
+
+offsets	.byte %11011111 ; 3								; short offsets
+		.byte %11111011 ; 6
+		.byte %00000000 ; 8
 		.byte %10000000 ; 10
-		
-		.byte %11101111 ;  4							; long offsets
-		.byte %11111101 ;  7
+		.byte %11101111 ; 4								; long offsets
+		.byte %11111101 ; 7
 		.byte %10000000 ; 10
 		.byte %11110000 ; 13
 
 ; -----------------------------------------------------------------------------------------------
 
 decrunch
-		lda #$2a
-		sta dc_get_zp1+0
-		sta dc_get_zp2+0
-		sta dc_get_zp3+0
-		lda #$37
-		sta dc_get_zp1+1
-		sta dc_get_zp2+1
-		sta dc_get_zp3+1
-		lda #$01
-		sta dc_get_zp1+2
-		sta dc_get_zp2+2
-		sta dc_get_zp3+2
-		lda #$00
-		sta dc_get_zp1+3
-		sta dc_get_zp2+3
-		sta dc_get_zp3+3
+		ldz #$00
+		jsr getnextbyte									; set unpack address
+		sta dc_ldst+0
+		sta dc_mdst+0
+		jsr getnextbyte
+		sta dc_ldst+1
+		sta dc_mdst+1
+		jsr getnextbyte
+		sta dc_ldst+2
+		sta dc_mdst+2
+		jsr getnextbyte
+		;sta dc_ldst+3									; ignore 4th byte (attic ram) for now
+		;sta dc_mdst+3
 
-		ldz #0											; get start address
-		ldx #0
-:		jsr decrunch_getnewbits
-		sta dc_put-1,x									; x already 1 at this point, so subtract 1
-		cpz #4
-		bcc :-
+		clc
 
-		; bcs												; c is assumed to be 1 here
-
-		lda #%10000000									; signal that new byte needs fetching
+		lda #$80
 		sta dc_bits
 
-dc_loop	DECRUNCH_GETNEXTBIT
-		bcs dc_match
+dloop	jsr getnextbit									; after this, carry is 0, bits = 01010101
+		bcs match
 
-dc_literal
-		DECRUNCH_GETLEN									; literal run - get length.
-		sta dc_llen+1
+		jsr getlen										; Literal run.. get length. after this, carry = 0, bits = 10101010, A = 1
+		sta dc_llen
+		tay												; put length into y for addput
 
-		ldy #0
-dc_literalloop
-		lda [dc_get_zp3],z
-		inz
-		bne :+
-		jsr dc_getnewbits_inc
-:		phy
-		
-		;sta [dc_put+0],y
-		iny
-dc_llen	cpy #0
-		bne dc_literalloop
-		clc
-		tya
-		adc dc_put+0
-		sta dc_put+0
-		bcc :+
-		inc dc_put+1
+		lda dc_get_zp+0
+		sta dc_lsrc+0
+		lda dc_get_zp+1
+		sta dc_lsrc+1
+		lda dc_get_zp+2
+		sta dc_lsrc+2
 
-:		iny
-		beq dc_loop
+		sta $d707										; inline DMA copy
+		.byte $00
+		.byte $00
+dc_llen	.word $0000										; count
+dc_lsrc	.word $0000										; src
+		.byte $00										; src bank
+dc_ldst	.word $0000										; dst
+		.byte $00										; dst bank
+		.byte $00										; cmd hi
+		.word $0000										; modulo, ignored
 
-		; Literal has to be followed by a match
+		jsr addget
+		jsr addput
 
-dc_match
-														; Z = 6 here
+		iny	
+		beq dloop
+														; has to continue with a match so fall through
+match
+		jsr getlen										; match.. get length.
 
-		DECRUNCH_GETLEN									; has to continue with a match - get length.
-		sta dc_mlen+1
+		tax												; length 255 -> EOF
+		inx
+		beq dc_end
 
-														; Z = 7 here
-		ldx #$0a										; LEN = 8 instead of 9?
-:		stx $d020
-		jmp :-
+		stx dc_mlen
 
-		cmp #$ff										; length 255 -> EOF
-		beq decrunch_end
-
-		cmp #2											; get num bits
-		lda #0
+		lda #0											; Get num bits
+		cpx #3
 		rol
-		DECRUNCH_GETNEXTBIT
-		rol
-		DECRUNCH_GETNEXTBIT
-		rol
-		tay
-		lda decrunch_tab,y
-		beq :++
+		jsr rolnextbit
+		jsr rolnextbit
+		tax
+		lda offsets,x
+		beq m8
 
-:		DECRUNCH_GETNEXTBIT								; get bits < 8
-		rol
+:		jsr rolnextbit									; Get bits < 8
 		bcs :-
-		bmi dc_mshort
-:		eor #$ff										; get byte
+		bmi mshort
+
+m8		eor #$ff										; Get byte
 		tay
-		lda [dc_get_zp2],z
-		inz
-		bne :+
-		jsr dc_getnewbits_inc
-:		jmp dc_mdone
+		jsr getnextbyte
+		jmp mdone
 
-dc_mshort
-		ldy #$ff
+		;.byte $ae ; = jmp mdone (LDX $FFA0)
 
-dc_mdone
-		;clc
-		adc dc_put+0
-		sta dc_mlda+1
+mshort	ldy #$ff
+
+mdone	;clc
+		adc dc_mdst+0
+		sta dc_msrc+0
 		tya
-		adc dc_put+1
-		sta dc_mlda+2
+		adc dc_mdst+1
+		sta dc_msrc+1
+		
+		lda dc_mdst+2									; added for m65 - needs sorting properly for when decrunch size is > $ffff
+		sta dc_msrc+2
 
-		ldy #$ff
-dc_mloop
-		iny
-dc_mlda	lda $beef,y
-		sta (dc_put+0),y
-dc_mlen	cpy #0
-		bne dc_mloop
+		sta $d707										; inline DMA copy
+		.byte $00
+		.byte $00
+dc_mlen	.word $0000										; count
+dc_msrc	.word $0000										; src
+		.byte $00										; src bank
+dc_mdst	.word $0000										; dst
+		.byte $00										; dst bank
+		.byte $00										; cmd hi
+		.word $0000										; modulo, ignored
 
-		;sec
-		tya
-		adc dc_put+0
-		sta dc_put+0
-		bcc :+
-		inc dc_put+1
+		ldy dc_mlen
+		jsr addput
 
-:		jmp dc_loop
+		ldx dc_msrc+1
+		cpx #$40
+		bmi :+
+		inc $d020
+		jmp *-3
 
-decrunch_end
-		rts
+:
+		;beq dc_end
+		jmp dloop
+
+dc_end	rts
 
 ; -----------------------------------------------------------------------------------------------
+
+dc_breaknow
+		.byte $00

@@ -683,6 +683,9 @@ fl_iffl_partial_read_from_second_half
 
 fl_iffl_dopartialcopy
 
+		lda fl_iffl_bytecounter							; set offset for DMA copy
+		sta fl_read_page+0
+
 		lda fl_iffl_sizeremaining+0
 		sta fl_bytes_to_copy
 

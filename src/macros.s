@@ -143,12 +143,16 @@ FileName	.byte .sprintf("%s", fname), 0
 			tax
 			lda fastload_iffl_start_address_and_size+0,x
 			sta fastload_address+0
+			sta dc_get_zp+0
 			lda fastload_iffl_start_address_and_size+1,x
 			sta fastload_address+1
+			sta dc_get_zp+1
 			lda fastload_iffl_start_address_and_size+2,x
 			sta fastload_address+2
+			sta dc_get_zp+2
 			lda fastload_iffl_start_address_and_size+3,x
 			sta fastload_address+3
+			sta dc_get_zp+3
 
 			lda fastload_iffl_start_address_and_size+4,x
 			sta fl_iffl_sizeremaining+0
@@ -163,6 +167,7 @@ FileName	.byte .sprintf("%s", fname), 0
 			sta fastload_request
 			inc fl_iffl_currentfile
 			jsr fl_waiting
+			jsr decrunch
 .endscope
 .endmacro
 
