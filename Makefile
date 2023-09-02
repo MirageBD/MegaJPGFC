@@ -12,7 +12,6 @@ CP				= cp
 MV				= mv
 RM				= rm -f
 CAT				= cat
-PACKIFFL		= packiffl
 
 SRC_DIR			= ./src
 UI_SRC_DIR		= ./src/ui
