@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 
-megabuild		= 0
+megabuild		= 1
 useetherload	= 1
 finalbuild		= 1
 attachdebugger	= 0
@@ -180,7 +180,7 @@ $(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr $(BIN_DIR)/alldata.bin
 	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
 	 \
 	 -f "megajpg" -w $(EXE_DIR)/boot.prg.addr \
-	 -f "megajpg.iffl" -w $(BIN_DIR)/alldata.bin \
+	 -f "megajpg.ifflcrch" -w $(BIN_DIR)/alldata.bin \
 	$@
 
 # -----------------------------------------------------------------------------

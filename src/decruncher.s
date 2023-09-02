@@ -204,8 +204,8 @@ dloop	jsr getnextbit									; after this, carry is 0, bits = 01010101
 		sta dc_lsrc+2
 
 		sta $d707										; inline DMA copy
-		.byte $00
-		.byte $00
+		.byte $00										; end of job options
+		.byte $00										; copy
 dc_llen	.word $0000										; count
 dc_lsrc	.word $0000										; src
 		.byte $00										; src bank
@@ -252,6 +252,16 @@ m8		eor #$ff										; Get byte
 mshort	ldy #$ff
 
 mdone	;clc
+								; HRMPF! HAVE TO DO THIS NASTY SHIT TO WORK AROUND DMA BUG :(((((
+		ldx #$00				; assume source addressing is going to be linear
+		cmp #$ff				; compare A with ff
+		bne :+ 
+		cpy #$ff				; compare Y with ff
+		bne :+
+		ldx #%00000010			; FFFF = -1 offset -> set source addressing to HOLD
+:		stx dc_cmdh
+
+		clc
 		adc dc_mdst+0
 		sta dc_msrc+0
 		tya
@@ -262,14 +272,14 @@ mdone	;clc
 		sta dc_msrc+2
 
 		sta $d707										; inline DMA copy
-		.byte $00
-		.byte $00
+		.byte $00										; end of job options
+		.byte $00										; copy
 dc_mlen	.word $0000										; count
 dc_msrc	.word $0000										; src
-		.byte $00										; src bank
+		.byte $00										; src bank and flags
 dc_mdst	.word $0000										; dst
-		.byte $00										; dst bank
-		.byte $00										; cmd hi
+		.byte $00										; dst bank and flags
+dc_cmdh	.byte $00										; cmd hi
 		.word $0000										; modulo, ignored
 
 		ldy dc_mlen
