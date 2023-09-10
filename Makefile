@@ -147,9 +147,10 @@ $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
 					Makefile Linkfile
 	$(AS) $(ASFLAGS) -o $@ $<
 
-$(EXE_DIR)/boot.prg.addr: $(EXE_DIR)/boot.o Linkfile
+$(EXE_DIR)/boot.prg.addr.mc: $(EXE_DIR)/boot.o Linkfile
 	$(LD) -Ln $(EXE_DIR)/boot.maptemp --dbgfile $(EXE_DIR)/boot.dbg -C Linkfile -o $(EXE_DIR)/boot.prg $(EXE_DIR)/boot.o
-	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 2001
+	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 00002100
+	$(MEGACRUNCH) -e 00002100 $(EXE_DIR)/boot.prg.addr
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.map
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
 
@@ -174,11 +175,11 @@ $(BIN_DIR)/alldata.bin: $(BINFILES)
 	$(MEGACRUNCH) $(BIN_DIR)/ycbcc2rgb.bin.addr
 	$(MEGAIFFL) $(BINFILESMC) $(BIN_DIR)/alldata.bin
 
-$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr $(BIN_DIR)/alldata.bin
+$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr.mc $(BIN_DIR)/alldata.bin
 	$(RM) $@
 	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
 	 \
-	 -f "megajpg" -w $(EXE_DIR)/boot.prg.addr \
+	 -f "megajpg" -w $(EXE_DIR)/boot.prg.addr.mc \
 	 -f "megajpg.ifflcrch" -w $(BIN_DIR)/alldata.bin \
 	$@
 
@@ -191,7 +192,7 @@ ifeq ($(megabuild), 1)
 ifeq ($(useetherload), 1)
 
 	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megajpg.d81" -c "quit"
-	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/boot.prg.addr
+	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/boot.prg.addr.mc
 #	$(EL) -b 02001 --offset ff --jump 2100 $(EXE_DIR)/boot.prg
 
 else
