@@ -45,9 +45,9 @@ entry_main
 		lda #$41										; enable 40MHz
 		sta $00
 
-		lda #$70										; Disable C65 rom protection using hypervisor trap (see mega65 manual)
-		sta $d640
-		eom
+		;lda #$70										; TOGGLE (!!!) C65 rom protection using hypervisor trap (see mega65 manual)
+		;sta $d640										; commented out for now, because the depacker already does this
+		;eom
 
 		lda #%11111000									; unmap c65 roms $d030 by clearing bits 3-7
 		trb $d030
