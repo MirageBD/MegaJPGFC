@@ -35,6 +35,15 @@
 .segment "SPRITEPAL"
 		.incbin "../bin/cursor_pal1.bin"
 
+.segment "DATA0A00"
+		.incbin "../bin/data0a00.bin"
+
+.segment "DATA4000"
+		.incbin "../bin/data4000.bin"
+
+.segment "YCBCC2RGB"
+		.incbin "../bin/ycbcc2rgb.bin"
+
 .segment "MAIN"
 
 entry_main
@@ -153,19 +162,19 @@ entry_main
 
 		cli
 
-		jsr fl_init
-		jsr fl_waiting
-		FLOPPY_IFFL_FAST_LOAD_INIT "MEGAJPG.IFFLCRCH"
+		;jsr fl_init
+		;jsr fl_waiting
+		;FLOPPY_IFFL_FAST_LOAD_INIT "MEGAJPG.IFFLCRCH"
 		;FLOPPY_IFFL_FAST_LOAD ; uichars
 		;FLOPPY_IFFL_FAST_LOAD ; glchars
 		;FLOPPY_IFFL_FAST_LOAD ; uipal
 		;FLOPPY_IFFL_FAST_LOAD ; sprites
 		;FLOPPY_IFFL_FAST_LOAD ; kbsprites
 		;FLOPPY_IFFL_FAST_LOAD ; spritepal
-		FLOPPY_IFFL_FAST_LOAD ; $0400						; data0a00.bin
-		FLOPPY_IFFL_FAST_LOAD ; $0a00						; data4000.bin
-		FLOPPY_IFFL_FAST_LOAD ; $8100						; ycbcc2rgb.bin
-		jsr fl_exit
+		;FLOPPY_IFFL_FAST_LOAD ; $0400						; data0a00.bin
+		;FLOPPY_IFFL_FAST_LOAD ; $0a00						; data4000.bin
+		;FLOPPY_IFFL_FAST_LOAD ; $8100						; ycbcc2rgb.bin
+		;jsr fl_exit
 
 main_restart
 		sei

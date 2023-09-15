@@ -1,12 +1,15 @@
 MEMORY
 {
-	RAM:			start=$2100, size=$20000;
+	RAM:			start=$0400, size=$20000;
 }
 
 SEGMENTS
 {
+	DATA0A00:		load=RAM, start=$0400;
+	DATA4000:		load=RAM, start=$0a00;
 	MAIN:			load=RAM, start=$2100;
 	TEXT:			load=RAM, align=256;
+	YCBCC2RGB:		load=RAM, start=$8100;
 	GLYPHSPAL:		load=RAM, start=$c700;
 	SPRITEPAL:		load=RAM, start=$ca00;
 	CURSORSPRITES:	load=RAM, start=$ce00;

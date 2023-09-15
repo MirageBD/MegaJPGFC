@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 
-megabuild		= 0
+megabuild		= 1
 useetherload	= 1
 finalbuild		= 1
 attachdebugger	= 0
@@ -57,9 +57,9 @@ OBJS = $(EXE_DIR)/boot.o $(EXE_DIR)/main.o
 #BINFILES  = $(BIN_DIR)/cursor_sprites1.bin
 #BINFILES  = $(BIN_DIR)/kbcursor_sprites1.bin
 #BINFILES  = $(BIN_DIR)/cursor_pal1.bin
-BINFILES  = $(BIN_DIR)/data0a00.bin
-BINFILES += $(BIN_DIR)/data4000.bin
-BINFILES += $(BIN_DIR)/ycbcc2rgb.bin
+#BINFILES  = $(BIN_DIR)/data0a00.bin
+#BINFILES  = $(BIN_DIR)/data4000.bin
+#BINFILES = $(BIN_DIR)/ycbcc2rgb.bin
 
 #BINFILESMC  = $(BIN_DIR)/font_chars1.bin.addr.mc
 #BINFILESMC  = $(BIN_DIR)/glyphs_chars1.bin.addr.mc
@@ -67,9 +67,9 @@ BINFILES += $(BIN_DIR)/ycbcc2rgb.bin
 #BINFILESMC  = $(BIN_DIR)/cursor_sprites1.bin.addr.mc
 #BINFILESMC  = $(BIN_DIR)/kbcursor_sprites1.bin.addr.mc
 #BINFILESMC  = $(BIN_DIR)/cursor_pal1.bin.addr.mc
-BINFILESMC  = $(BIN_DIR)/data0a00.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/data4000.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/ycbcc2rgb.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/data0a00.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/data4000.bin.addr.mc
+#BINFILESMC = $(BIN_DIR)/ycbcc2rgb.bin.addr.mc
 
 # % is a wildcard
 # $< is the first dependency
@@ -139,7 +139,7 @@ $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
 
 $(EXE_DIR)/boot.prg.addr.mc: $(EXE_DIR)/boot.o Linkfile
 	$(LD) -Ln $(EXE_DIR)/boot.maptemp --dbgfile $(EXE_DIR)/boot.dbg -C Linkfile -o $(EXE_DIR)/boot.prg $(EXE_DIR)/boot.o
-	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 00002100
+	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 00000400
 	$(MEGACRUNCH) -e 00002100 $(EXE_DIR)/boot.prg.addr
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.map
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
@@ -151,26 +151,25 @@ $(BIN_DIR)/alldata.bin: $(BINFILES)
 #	$(MEGAADDRESS) $(BIN_DIR)/cursor_sprites1.bin   0000ce00
 #	$(MEGAADDRESS) $(BIN_DIR)/kbcursor_sprites1.bin 0000cf00
 #	$(MEGAADDRESS) $(BIN_DIR)/cursor_pal1.bin       0000ca00
-	$(MEGAADDRESS) $(BIN_DIR)/data0a00.bin          00000400
-	$(MEGAADDRESS) $(BIN_DIR)/data4000.bin          00000a00
-	$(MEGAADDRESS) $(BIN_DIR)/ycbcc2rgb.bin         00008100
+#	$(MEGAADDRESS) $(BIN_DIR)/data0a00.bin          00000400
+#	$(MEGAADDRESS) $(BIN_DIR)/data4000.bin          00000a00
+#	$(MEGAADDRESS) $(BIN_DIR)/ycbcc2rgb.bin         00008100
 #	$(MEGACRUNCH) $(BIN_DIR)/font_chars1.bin.addr
 #	$(MEGACRUNCH) $(BIN_DIR)/glyphs_chars1.bin.addr
 #	$(MEGACRUNCH) $(BIN_DIR)/glyphs_pal1.bin.addr
 #	$(MEGACRUNCH) $(BIN_DIR)/cursor_sprites1.bin.addr
 #	$(MEGACRUNCH) $(BIN_DIR)/kbcursor_sprites1.bin.addr
 #	$(MEGACRUNCH) $(BIN_DIR)/cursor_pal1.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/data0a00.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/data4000.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/ycbcc2rgb.bin.addr
-	$(MEGAIFFL) $(BINFILESMC) $(BIN_DIR)/alldata.bin
+#	$(MEGACRUNCH) $(BIN_DIR)/data0a00.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/data4000.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/ycbcc2rgb.bin.addr
+#	$(MEGAIFFL) $(BINFILESMC) $(BIN_DIR)/alldata.bin
 
 $(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr.mc $(BIN_DIR)/alldata.bin
 	$(RM) $@
 	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
 	 \
 	 -f "megajpg" -w $(EXE_DIR)/boot.prg.addr.mc \
-	 -f "megajpg.ifflcrch" -w $(BIN_DIR)/alldata.bin \
 	$@
 
 # -----------------------------------------------------------------------------
