@@ -17,6 +17,24 @@
 
 ; ----------------------------------------------------------------------------------------------------
 
+.segment "FONT"
+		.incbin "../bin/font_chars1.bin"
+
+.segment "GLYPHS"
+		.incbin "../bin/glyphs_chars1.bin"
+
+.segment "GLYPHSPAL"
+		.incbin "../bin/glyphs_pal1.bin"
+
+.segment "CURSORSPRITES"
+		.incbin "../bin/cursor_sprites1.bin"
+
+.segment "KBSPRITES"
+		.incbin "../bin/kbcursor_sprites1.bin"
+
+.segment "SPRITEPAL"
+		.incbin "../bin/cursor_pal1.bin"
+
 .segment "MAIN"
 
 entry_main
@@ -138,12 +156,12 @@ entry_main
 		jsr fl_init
 		jsr fl_waiting
 		FLOPPY_IFFL_FAST_LOAD_INIT "MEGAJPG.IFFLCRCH"
-		FLOPPY_IFFL_FAST_LOAD ; uichars
-		FLOPPY_IFFL_FAST_LOAD ; glchars
-		FLOPPY_IFFL_FAST_LOAD ; uipal
-		FLOPPY_IFFL_FAST_LOAD ; sprites
-		FLOPPY_IFFL_FAST_LOAD ; kbsprites
-		FLOPPY_IFFL_FAST_LOAD ; spritepal
+		;FLOPPY_IFFL_FAST_LOAD ; uichars
+		;FLOPPY_IFFL_FAST_LOAD ; glchars
+		;FLOPPY_IFFL_FAST_LOAD ; uipal
+		;FLOPPY_IFFL_FAST_LOAD ; sprites
+		;FLOPPY_IFFL_FAST_LOAD ; kbsprites
+		;FLOPPY_IFFL_FAST_LOAD ; spritepal
 		FLOPPY_IFFL_FAST_LOAD ; $0400						; data0a00.bin
 		FLOPPY_IFFL_FAST_LOAD ; $0a00						; data4000.bin
 		FLOPPY_IFFL_FAST_LOAD ; $8100						; ycbcc2rgb.bin

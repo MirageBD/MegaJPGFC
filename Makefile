@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 
-megabuild		= 1
+megabuild		= 0
 useetherload	= 1
 finalbuild		= 1
 attachdebugger	= 0
@@ -51,33 +51,23 @@ default: all
 
 OBJS = $(EXE_DIR)/boot.o $(EXE_DIR)/main.o
 
-BINFILES  = $(BIN_DIR)/font_chars1.bin
-BINFILES += $(BIN_DIR)/glyphs_chars1.bin
-BINFILES += $(BIN_DIR)/glyphs_pal1.bin
-BINFILES += $(BIN_DIR)/cursor_sprites1.bin
-BINFILES += $(BIN_DIR)/kbcursor_sprites1.bin
-BINFILES += $(BIN_DIR)/cursor_pal1.bin
-BINFILES += $(BIN_DIR)/data0a00.bin
+#BINFILES  = $(BIN_DIR)/font_chars1.bin
+#BINFILES  = $(BIN_DIR)/glyphs_chars1.bin
+#BINFILES  = $(BIN_DIR)/glyphs_pal1.bin
+#BINFILES  = $(BIN_DIR)/cursor_sprites1.bin
+#BINFILES  = $(BIN_DIR)/kbcursor_sprites1.bin
+#BINFILES  = $(BIN_DIR)/cursor_pal1.bin
+BINFILES  = $(BIN_DIR)/data0a00.bin
 BINFILES += $(BIN_DIR)/data4000.bin
 BINFILES += $(BIN_DIR)/ycbcc2rgb.bin
 
-BINFILESADDR  = $(BIN_DIR)/font_chars1.bin.addr
-BINFILESADDR += $(BIN_DIR)/glyphs_chars1.bin.addr
-BINFILESADDR += $(BIN_DIR)/glyphs_pal1.bin.addr
-BINFILESADDR += $(BIN_DIR)/cursor_sprites1.bin.addr
-BINFILESADDR += $(BIN_DIR)/kbcursor_sprites1.bin.addr
-BINFILESADDR += $(BIN_DIR)/cursor_pal1.bin.addr
-BINFILESADDR += $(BIN_DIR)/data0a00.bin.addr
-BINFILESADDR += $(BIN_DIR)/data4000.bin.addr
-BINFILESADDR += $(BIN_DIR)/ycbcc2rgb.bin.addr
-
-BINFILESMC  = $(BIN_DIR)/font_chars1.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/glyphs_chars1.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/glyphs_pal1.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/cursor_sprites1.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/kbcursor_sprites1.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/cursor_pal1.bin.addr.mc
-BINFILESMC += $(BIN_DIR)/data0a00.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/font_chars1.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/glyphs_chars1.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/glyphs_pal1.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/cursor_sprites1.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/kbcursor_sprites1.bin.addr.mc
+#BINFILESMC  = $(BIN_DIR)/cursor_pal1.bin.addr.mc
+BINFILESMC  = $(BIN_DIR)/data0a00.bin.addr.mc
 BINFILESMC += $(BIN_DIR)/data4000.bin.addr.mc
 BINFILESMC += $(BIN_DIR)/ycbcc2rgb.bin.addr.mc
 
@@ -155,21 +145,21 @@ $(EXE_DIR)/boot.prg.addr.mc: $(EXE_DIR)/boot.o Linkfile
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
 
 $(BIN_DIR)/alldata.bin: $(BINFILES)
-	$(MEGAADDRESS) $(BIN_DIR)/font_chars1.bin       00010000
-	$(MEGAADDRESS) $(BIN_DIR)/glyphs_chars1.bin     00014000
-	$(MEGAADDRESS) $(BIN_DIR)/glyphs_pal1.bin       0000c700
-	$(MEGAADDRESS) $(BIN_DIR)/cursor_sprites1.bin   0000ce00
-	$(MEGAADDRESS) $(BIN_DIR)/kbcursor_sprites1.bin 0000cf00
-	$(MEGAADDRESS) $(BIN_DIR)/cursor_pal1.bin       0000ca00
+#	$(MEGAADDRESS) $(BIN_DIR)/font_chars1.bin       00010000
+#	$(MEGAADDRESS) $(BIN_DIR)/glyphs_chars1.bin     00014000
+#	$(MEGAADDRESS) $(BIN_DIR)/glyphs_pal1.bin       0000c700
+#	$(MEGAADDRESS) $(BIN_DIR)/cursor_sprites1.bin   0000ce00
+#	$(MEGAADDRESS) $(BIN_DIR)/kbcursor_sprites1.bin 0000cf00
+#	$(MEGAADDRESS) $(BIN_DIR)/cursor_pal1.bin       0000ca00
 	$(MEGAADDRESS) $(BIN_DIR)/data0a00.bin          00000400
 	$(MEGAADDRESS) $(BIN_DIR)/data4000.bin          00000a00
 	$(MEGAADDRESS) $(BIN_DIR)/ycbcc2rgb.bin         00008100
-	$(MEGACRUNCH) $(BIN_DIR)/font_chars1.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/glyphs_chars1.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/glyphs_pal1.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/cursor_sprites1.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/kbcursor_sprites1.bin.addr
-	$(MEGACRUNCH) $(BIN_DIR)/cursor_pal1.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/font_chars1.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/glyphs_chars1.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/glyphs_pal1.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/cursor_sprites1.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/kbcursor_sprites1.bin.addr
+#	$(MEGACRUNCH) $(BIN_DIR)/cursor_pal1.bin.addr
 	$(MEGACRUNCH) $(BIN_DIR)/data0a00.bin.addr
 	$(MEGACRUNCH) $(BIN_DIR)/data4000.bin.addr
 	$(MEGACRUNCH) $(BIN_DIR)/ycbcc2rgb.bin.addr
