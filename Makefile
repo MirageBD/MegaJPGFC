@@ -22,12 +22,6 @@ BIN_DIR			= ./bin
 AS				= ca65mega
 ASFLAGS			= -g -D megabuild=$(megabuild) --cpu 45GS02 -U --feature force_range -I ./exe
 LD				= ld65
-C1541			= c1541
-CC1541			= cc1541
-SED				= sed
-PU				= pucrunch
-BBMEGA			= b2mega
-LC				= crush 6
 GCC				= gcc
 MC				= MegaConvert
 MEGAADDRESS		= megatool -a
@@ -36,7 +30,6 @@ MEGAIFFL		= megatool -i
 MEGAMOD			= MegaMod
 EL				= etherload -i 192.168.1.255
 XMEGA65			= H:\xemu\xmega65.exe
-MEGAFTP			= mega65_ftp -i 192.168.1.255
 
 CONVERTBREAK	= 's/al [0-9A-F]* \.br_\([a-z]*\)/\0\nbreak \.br_\1/'
 CONVERTWATCH	= 's/al [0-9A-F]* \.wh_\([a-z]*\)/\0\nwatch store \.wh_\1/'
@@ -73,8 +66,6 @@ $(BIN_DIR)/kbcursor_sprites1.bin: $(BIN_DIR)/kbcursor.bin
 
 $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
 					$(SRC_DIR)/main.s \
-					$(SRC_DIR)/irqload.s \
-					$(SRC_DIR)/decruncher.s \
 					$(SRC_DIR)/macros.s \
 					$(SRC_DIR)/mathmacros.s \
 					$(SRC_DIR)/jpg.s \
@@ -122,23 +113,13 @@ $(EXE_DIR)/boot.prg.addr.mc: $(BINFILES) $(EXE_DIR)/boot.o Linkfile
 	$(LD) -Ln $(EXE_DIR)/boot.maptemp --dbgfile $(EXE_DIR)/boot.dbg -C Linkfile -o $(EXE_DIR)/boot.prg $(EXE_DIR)/boot.o
 	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 00000400
 	$(MEGACRUNCH) -e 00002100 $(EXE_DIR)/boot.prg.addr
-	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.map
-	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
-
-$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr.mc
-	$(RM) $@
-	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
-	 \
-	 -f "megajpg" -w $(EXE_DIR)/boot.prg.addr.mc \
-	$@
 
 # -----------------------------------------------------------------------------
 
-run: $(EXE_DIR)/megajpg.d81
+run: $(EXE_DIR)/boot.prg.addr.mc
 
 ifeq ($(megabuild), 1)
-	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megajpg.d81" -c "quit"
-	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/boot.prg.addr.mc
+	$(EL) -r $(EXE_DIR)/boot.prg.addr.mc
 ifeq ($(attachdebugger), 1)
 	m65dbg --device /dev/ttyS2
 endif

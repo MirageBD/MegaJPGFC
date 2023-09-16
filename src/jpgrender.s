@@ -231,9 +231,10 @@ endscreenplot
 		;end bigger screen
 */
 
-		;lda #$00		; set TEXTXPOS to same as SDBDRWDLSB
-		;lda $d04c
-		;sta $d05c
+		lda #$50		; set TEXTXPOS to same as SDBDRWDLSB
+		lda $d04c
+		lda #$42
+		sta $d05c
 
 		lda #$01
 		sta $d05b										; Set display to V200

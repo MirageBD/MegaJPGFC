@@ -7,6 +7,7 @@ ui_init
 
 		lda #$50										; set TEXTXPOS to same as SDBDRWDLSB
 		sta $d04c
+		sta $d05c
 
 		lda #80*2										; logical chars per row
 		sta $d058
