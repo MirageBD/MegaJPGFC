@@ -1,19 +1,19 @@
 ; ----------------------------------------------------------------------------------------------------
 
+.define uipal					$ca00	; size = $0300
+.define spritepal				$cd00
+
 .define screen					$e000	; size = 80*50*2 = $1f40
 
-.define uipal					$c700	; size = $0300
-.define spritepal				$ca00
-.define sprptrs					$cd00
-.define sprites					$ce00
-.define kbsprites				$cf00
-.define jpgchars				$f000	; 40 * 64 = $0a00s
-.define emptychar				$ff80	; size = 64
+.define sprites					$f200
+.define kbsprites				$f300
+.define sprptrs					$f3c0
+.define jpgchars				$f400	; 40 * 64 = $0a00
 
 .define uichars					$10000	; $10000 - $14000     size = $4000
 .define glchars					$14000	; $14000 - $1d000     size = $9000
 
-.define jpgdata					$20000
+.define jpgdata					$1d000  ; 320*200*3 = $2ee00
 
 ; ----------------------------------------------------------------------------------------------------
 
@@ -47,6 +47,7 @@
 .segment "MAIN"
 
 entry_main
+main_restart
 
 		sei
 
@@ -69,13 +70,6 @@ entry_main
 		sta $d02f
 		eom
 
-		lda #$41										; enable 40MHz
-		sta $00
-
-		;lda #$70										; TOGGLE (!!!) C65 rom protection using hypervisor trap (see mega65 manual)
-		;sta $d640										; commented out for now, because the depacker already does this
-		;eom
-
 		lda #%11111000									; unmap c65 roms $d030 by clearing bits 3-7
 		trb $d030
 		lda #%00000100									; PAL - Use PALETTE ROM (0) or RAM (1) entries for colours 0 - 15
@@ -89,98 +83,6 @@ entry_main
 
 		lda #80											; set to 80 for etherload
 		sta $d05e
-
-		lda #40*2										; logical chars per row
-		sta $d058
-		lda #$00
-		sta $d059
-
-		ldx #$00
-		lda #$00
-:		sta emptychar,x
-		inx
-		cpx #64
-		bne :-
-
-		ldx #$00
-:		lda #<(emptychar/64)
-		sta screen+0*$0100+0,x
-		sta screen+1*$0100+0,x
-		sta screen+2*$0100+0,x
-		sta screen+3*$0100+0,x
-		sta screen+4*$0100+0,x
-		sta screen+5*$0100+0,x
-		sta screen+6*$0100+0,x
-		sta screen+7*$0100+0,x
-		lda #>(emptychar/64)
-		sta screen+0*$0100+1,x
-		sta screen+1*$0100+1,x
-		sta screen+2*$0100+1,x
-		sta screen+3*$0100+1,x
-		sta screen+4*$0100+1,x
-		sta screen+5*$0100+1,x
-		sta screen+6*$0100+1,x
-		sta screen+7*$0100+1,x
-		inx
-		inx
-		bne :-
-
-		DMA_RUN_JOB clearcolorramjob
-
-		lda #<screen									; set pointer to screen ram
-		sta $d060
-		lda #>screen
-		sta $d061
-		lda #(screen & $ff0000) >> 16
-		sta $d062
-		lda #$00
-		sta $d063
-
-		lda #<$0800										; set (offset!) pointer to colour ram
-		sta $d064
-		lda #>$0800
-		sta $d065
-
-		lda #$7f										; disable CIA interrupts
-		sta $dc0d
-		sta $dd0d
-		lda $dc0d
-		lda $dd0d
-
-		lda #$00										; disable IRQ raster interrupts because C65 uses raster interrupts in the ROM
-		sta $d01a
-
-		lda #$00
-		sta $d012
-		lda #<fastload_irq_handler
-		sta $fffe
-		lda #>fastload_irq_handler
-		sta $ffff
-
-		lda #$01										; ACK
-		sta $d01a
-
-		cli
-
-		;jsr fl_init
-		;jsr fl_waiting
-		;FLOPPY_IFFL_FAST_LOAD_INIT "MEGAJPG.IFFLCRCH"
-		;FLOPPY_IFFL_FAST_LOAD ; uichars
-		;FLOPPY_IFFL_FAST_LOAD ; glchars
-		;FLOPPY_IFFL_FAST_LOAD ; uipal
-		;FLOPPY_IFFL_FAST_LOAD ; sprites
-		;FLOPPY_IFFL_FAST_LOAD ; kbsprites
-		;FLOPPY_IFFL_FAST_LOAD ; spritepal
-		;FLOPPY_IFFL_FAST_LOAD ; $0400						; data0a00.bin
-		;FLOPPY_IFFL_FAST_LOAD ; $0a00						; data4000.bin
-		;FLOPPY_IFFL_FAST_LOAD ; $8100						; ycbcc2rgb.bin
-		;jsr fl_exit
-
-main_restart
-		sei
-
-		lda #$35
-		sta $01
 
 		lda #$02
 		sta $d020

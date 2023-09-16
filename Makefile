@@ -1,8 +1,6 @@
 # -----------------------------------------------------------------------------
 
 megabuild		= 1
-useetherload	= 1
-finalbuild		= 1
 attachdebugger	= 0
 
 # -----------------------------------------------------------------------------
@@ -22,7 +20,7 @@ BIN_DIR			= ./bin
 
 # mega65 fork of ca65: https://github.com/dillof/cc65
 AS				= ca65mega
-ASFLAGS			= -g -D finalbuild=$(finalbuild) -D megabuild=$(megabuild) -D useetherload=$(useetherload) --cpu 45GS02 -U --feature force_range -I ./exe
+ASFLAGS			= -g -D megabuild=$(megabuild) --cpu 45GS02 -U --feature force_range -I ./exe
 LD				= ld65
 C1541			= c1541
 CC1541			= cc1541
@@ -51,32 +49,15 @@ default: all
 
 OBJS = $(EXE_DIR)/boot.o $(EXE_DIR)/main.o
 
-#BINFILES  = $(BIN_DIR)/font_chars1.bin
-#BINFILES  = $(BIN_DIR)/glyphs_chars1.bin
-#BINFILES  = $(BIN_DIR)/glyphs_pal1.bin
-#BINFILES  = $(BIN_DIR)/cursor_sprites1.bin
-#BINFILES  = $(BIN_DIR)/kbcursor_sprites1.bin
-#BINFILES  = $(BIN_DIR)/cursor_pal1.bin
-#BINFILES  = $(BIN_DIR)/data0a00.bin
-#BINFILES  = $(BIN_DIR)/data4000.bin
-#BINFILES = $(BIN_DIR)/ycbcc2rgb.bin
-
-#BINFILESMC  = $(BIN_DIR)/font_chars1.bin.addr.mc
-#BINFILESMC  = $(BIN_DIR)/glyphs_chars1.bin.addr.mc
-#BINFILESMC  = $(BIN_DIR)/glyphs_pal1.bin.addr.mc
-#BINFILESMC  = $(BIN_DIR)/cursor_sprites1.bin.addr.mc
-#BINFILESMC  = $(BIN_DIR)/kbcursor_sprites1.bin.addr.mc
-#BINFILESMC  = $(BIN_DIR)/cursor_pal1.bin.addr.mc
-#BINFILESMC  = $(BIN_DIR)/data0a00.bin.addr.mc
-#BINFILESMC  = $(BIN_DIR)/data4000.bin.addr.mc
-#BINFILESMC = $(BIN_DIR)/ycbcc2rgb.bin.addr.mc
-
-# % is a wildcard
-# $< is the first dependency
-# $@ is the target
-# $^ is all dependencies
-
-# -----------------------------------------------------------------------------
+BINFILES  = $(BIN_DIR)/font_chars1.bin
+BINFILES += $(BIN_DIR)/glyphs_chars1.bin
+BINFILES += $(BIN_DIR)/glyphs_pal1.bin
+BINFILES += $(BIN_DIR)/cursor_sprites1.bin
+BINFILES += $(BIN_DIR)/kbcursor_sprites1.bin
+BINFILES += $(BIN_DIR)/cursor_pal1.bin
+BINFILES += $(BIN_DIR)/data0a00.bin
+BINFILES += $(BIN_DIR)/data4000.bin
+BINFILES += $(BIN_DIR)/ycbcc2rgb.bin
 
 $(BIN_DIR)/font_chars1.bin: $(BIN_DIR)/font.bin
 	$(MC) $< cm1:1 d1:0 cl1:10000 rc1:0
@@ -137,35 +118,14 @@ $(EXE_DIR)/boot.o:	$(SRC_DIR)/boot.s \
 					Makefile Linkfile
 	$(AS) $(ASFLAGS) -o $@ $<
 
-$(EXE_DIR)/boot.prg.addr.mc: $(EXE_DIR)/boot.o Linkfile
+$(EXE_DIR)/boot.prg.addr.mc: $(BINFILES) $(EXE_DIR)/boot.o Linkfile
 	$(LD) -Ln $(EXE_DIR)/boot.maptemp --dbgfile $(EXE_DIR)/boot.dbg -C Linkfile -o $(EXE_DIR)/boot.prg $(EXE_DIR)/boot.o
 	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 00000400
 	$(MEGACRUNCH) -e 00002100 $(EXE_DIR)/boot.prg.addr
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.map
 	$(SED) $(CONVERTVICEMAP) < $(EXE_DIR)/boot.maptemp > boot.list
 
-$(BIN_DIR)/alldata.bin: $(BINFILES)
-#	$(MEGAADDRESS) $(BIN_DIR)/font_chars1.bin       00010000
-#	$(MEGAADDRESS) $(BIN_DIR)/glyphs_chars1.bin     00014000
-#	$(MEGAADDRESS) $(BIN_DIR)/glyphs_pal1.bin       0000c700
-#	$(MEGAADDRESS) $(BIN_DIR)/cursor_sprites1.bin   0000ce00
-#	$(MEGAADDRESS) $(BIN_DIR)/kbcursor_sprites1.bin 0000cf00
-#	$(MEGAADDRESS) $(BIN_DIR)/cursor_pal1.bin       0000ca00
-#	$(MEGAADDRESS) $(BIN_DIR)/data0a00.bin          00000400
-#	$(MEGAADDRESS) $(BIN_DIR)/data4000.bin          00000a00
-#	$(MEGAADDRESS) $(BIN_DIR)/ycbcc2rgb.bin         00008100
-#	$(MEGACRUNCH) $(BIN_DIR)/font_chars1.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/glyphs_chars1.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/glyphs_pal1.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/cursor_sprites1.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/kbcursor_sprites1.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/cursor_pal1.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/data0a00.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/data4000.bin.addr
-#	$(MEGACRUNCH) $(BIN_DIR)/ycbcc2rgb.bin.addr
-#	$(MEGAIFFL) $(BINFILESMC) $(BIN_DIR)/alldata.bin
-
-$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr.mc $(BIN_DIR)/alldata.bin
+$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr.mc
 	$(RM) $@
 	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
 	 \
@@ -177,41 +137,13 @@ $(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr.mc $(BIN_DIR)/alldata.bin
 run: $(EXE_DIR)/megajpg.d81
 
 ifeq ($(megabuild), 1)
-
-ifeq ($(useetherload), 1)
-
 	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megajpg.d81" -c "quit"
 	$(EL) -m MEGAJPG.D81 -r $(EXE_DIR)/boot.prg.addr.mc
-#	$(EL) -b 02001 --offset ff --jump 2100 $(EXE_DIR)/boot.prg
-
-else
-
-	mega65_ftp.exe -l COM3 -s 2000000 -c "cd /" \
-	-c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megjpg.d81"
-
-	m65 -l COM3 -F
-	m65 -l COM3 -T 'list'
-	m65 -l COM3 -T 'list'
-	m65 -l COM3 -T 'list'
-	m65 -l COM3 -T 'mount "megajpg.d81"'
-	m65 -l COM3 -T 'load "$$"'
-	m65 -l COM3 -T 'list'
-	m65 -l COM3 -T 'list'
-	m65 -l COM3 -T 'load "boot"'
-	m65 -l COM3 -T 'list'
-	m65 -l COM3 -T 'run'
-
-endif
-
 ifeq ($(attachdebugger), 1)
 	m65dbg --device /dev/ttyS2
 endif
-
 else
-
-#	cmd.exe /c $(XMEGA65) -mastervolume 50 -autoload -8 $(EXE_DIR)/disk.d81
 	cmd.exe /c $(XMEGA65) -autoload -8 $(EXE_DIR)/megajpg.d81
-
 endif
 
 clean:

@@ -10,10 +10,10 @@ SEGMENTS
 	MAIN:			load=RAM, start=$2100;
 	TEXT:			load=RAM, align=256;
 	YCBCC2RGB:		load=RAM, start=$8100;
-	GLYPHSPAL:		load=RAM, start=$c700;
-	SPRITEPAL:		load=RAM, start=$ca00;
-	CURSORSPRITES:	load=RAM, start=$ce00;
-	KBSPRITES:		load=RAM, start=$cf00;
+	GLYPHSPAL:		load=RAM, start=$ca00;
+	SPRITEPAL:		load=RAM, start=$cd00;
+	CURSORSPRITES:	load=RAM, start=$f200;
+	KBSPRITES:		load=RAM, start=$f300;
 	FONT:			load=RAM, start=$10000;
 	GLYPHS:			load=RAM, start=$14000;
 }
