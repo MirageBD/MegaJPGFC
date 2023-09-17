@@ -23,6 +23,7 @@ AS				= ca65mega
 ASFLAGS			= -g -D megabuild=$(megabuild) --cpu 45GS02 -U --feature force_range -I ./exe
 LD				= ld65
 GCC				= gcc
+CC1541			= cc1541
 MC				= MegaConvert
 MEGAADDRESS		= megatool -a
 MEGACRUNCH		= megatool -c
@@ -114,11 +115,19 @@ $(EXE_DIR)/boot.prg.addr.mc: $(BINFILES) $(EXE_DIR)/boot.o Linkfile
 	$(MEGAADDRESS) $(EXE_DIR)/boot.prg 00000400
 	$(MEGACRUNCH) -e 00002100 $(EXE_DIR)/boot.prg.addr
 
+$(EXE_DIR)/megajpg.d81: $(EXE_DIR)/boot.prg.addr.mc
+	$(RM) $@
+	$(CC1541) -n "megajpg" -i " 2023" -d 19 -v\
+	 \
+	 -f "megajpg" -w $(EXE_DIR)/boot.prg.addr.mc \
+	$@
+
 # -----------------------------------------------------------------------------
 
-run: $(EXE_DIR)/boot.prg.addr.mc
+run: $(EXE_DIR)/megajpg.d81
 
 ifeq ($(megabuild), 1)
+	$(MEGAFTP) -c "put D:\Mega\MegaJPGFC\exe\megajpg.d81 megajpg.d81" -c "quit"
 	$(EL) -r $(EXE_DIR)/boot.prg.addr.mc
 ifeq ($(attachdebugger), 1)
 	m65dbg --device /dev/ttyS2

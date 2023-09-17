@@ -64,11 +64,19 @@ main_restart
 		map
 		eom
 
+		lda #$41										; enable 40MHz
+		sta $00
+
 		lda #$47										; enable C65GS/VIC-IV IO registers
 		sta $d02f
 		lda #$53
 		sta $d02f
 		eom
+
+														; don't force anything. should work in both NTSC and PALs
+		;lda #%10000000									; force PAL mode, because I can't be bothered with fixing it for NTSC
+		;trb $d06f										; clear bit 7 for PAL ; trb $d06f 
+		;tsb $d06f										; set bit 7 for NTSC  ; tsb $d06f
 
 		lda #%11111000									; unmap c65 roms $d030 by clearing bits 3-7
 		trb $d030
