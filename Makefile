@@ -31,6 +31,7 @@ MEGAIFFL		= megatool -i
 MEGAMOD			= MegaMod
 EL				= etherload -i 192.168.1.255
 XMEGA65			= H:\xemu\xmega65.exe
+MEGAFTP			= mega65_ftp -i 192.168.1.255
 
 CONVERTBREAK	= 's/al [0-9A-F]* \.br_\([a-z]*\)/\0\nbreak \.br_\1/'
 CONVERTWATCH	= 's/al [0-9A-F]* \.wh_\([a-z]*\)/\0\nwatch store \.wh_\1/'
