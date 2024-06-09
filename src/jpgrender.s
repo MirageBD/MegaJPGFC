@@ -548,7 +548,7 @@ jpg_load_irq
 		cmp #$02
 		beq set_jpg_render_irq
 
-		lda #$33
+		lda palntscscreenstart
 		sta $d012
 
 		plz
@@ -624,10 +624,9 @@ jpg_render_irq
 		lda #<.hiword(jpgdata + 2*320 + 240)
 		sta jpgrucbr+2
 
-		clc
-		lda palntscscreenstart
-		adc #$01
-:		cmp $d012
+		ldy palntscscreenstart
+		iny
+:		cpy $d012
 		bne :-
 
 		lda #$00
@@ -639,17 +638,77 @@ jpg_render_irq_loop
 		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
 		and #%00111111
 		sta $d070
-		DMA_RUN_JOB jpgrender_updatecoloursred
-		DMA_RUN_JOB jpgrender_updatecoloursgreen
-		DMA_RUN_JOB jpgrender_updatecoloursblue
+
+			sta $d707										; inline DMA copy
+			.byte $00										; end of job options
+			.byte $00										; copy
+			.word 240										; count
+jpgrucr		.word $0000										; src
+			.byte $00										; src bank and flags
+			.word $d108										; dst
+			.byte (($d108 >> 16) & $0f) | %10000000			; dst bank and flags ; turn on bit 7 for I/O when writing to $d100
+			.byte $00										; cmd hi
+			.word $0000										; modulo, ignored
+
+			sta $d707										; inline DMA copy
+			.byte $00										; end of job options
+			.byte $00										; copy
+			.word 240										; count
+jpgrucg		.word $0000										; src
+			.byte $00										; src bank and flags
+			.word $d208										; dst
+			.byte (($d208 >> 16) & $0f) | %10000000			; dst bank and flags
+			.byte $00										; cmd hi
+			.word $0000										; modulo, ignored
+
+			sta $d707										; inline DMA copy
+			.byte $00										; end of job options
+			.byte $00										; copy
+			.word 240										; count
+jpgrucb		.word $0000										; src
+			.byte $00										; src bank and flags
+			.word $d308										; dst
+			.byte (($d308 >> 16) & $0f) | %10000000			; dst bank and flags
+			.byte $00										; cmd hi
+			.word $0000										; modulo, ignored
 
 		lda $d070										; BANK IN BITMAP PALETTE - select mapped bank with the upper 2 bits of $d070
 		and #%00111111
 		ora #%10000000
 		sta $d070
-		DMA_RUN_JOB jpgrender_updatecoloursredright
-		DMA_RUN_JOB jpgrender_updatecoloursgreenright
-		DMA_RUN_JOB jpgrender_updatecoloursblueright
+
+			sta $d707										; inline DMA copy
+			.byte $00										; end of job options
+			.byte $00										; copy
+			.word 80										; count
+jpgrucrr	.word $0000										; src
+			.byte $00										; src bank and flags
+			.word $d108										; dst
+			.byte (($d108 >> 16) & $0f) | %10000000			; dst bank and flags
+			.byte $00										; cmd hi
+			.word $0000										; modulo, ignored
+
+			sta $d707										; inline DMA copy
+			.byte $00										; end of job options
+			.byte $00										; copy
+			.word 80										; count
+jpgrucgr	.word $0000										; src
+			.byte $00										; src bank and flags
+			.word $d208										; dst
+			.byte (($d208 >> 16) & $0f) | %10000000			; dst bank and flags
+			.byte $00										; cmd hi
+			.word $0000										; modulo, ignored
+
+			sta $d707										; inline DMA copy
+			.byte $00										; end of job options
+			.byte $00										; copy
+			.word 80										; count
+jpgrucbr	.word $0000										; src
+			.byte $00										; src bank and flags
+			.word $d308										; dst
+			.byte (($d308 >> 16) & $0f) | %10000000			; dst bank and flags
+			.byte $00										; cmd hi
+			.word $0000										; modulo, ignored
 
 		clc
 		lda jpgrucr+0									; add 3*320 to DMA copy
@@ -717,18 +776,15 @@ jpg_render_irq_loop
 		adc #<.hiword(3*320)
 		sta jpgrucbr+2
 
-		lda $d012
-		clc
-		adc #$01
-:		cmp $d012
+		iny
+:		cpy $d012
 		bne :-
 
 		inx
 		cpx #200
-		beq :+
-		jmp jpg_render_irq_loop
+		lbne jpg_render_irq_loop
 
-:		jsr mouse_update
+		jsr mouse_update
 		jsr keyboard_update
 
 		lda mouse_released
@@ -738,16 +794,13 @@ jpg_render_irq_loop
 		sta main_event
 		bra :++
 
-:
-		lda keyboard_shouldsendreleaseevent
+:		lda keyboard_shouldsendreleaseevent
 		beq :+
 
 		lda #$03
 		sta main_event
 
-:		
-
-		lda #$32
+:		lda #$32
 		sta palntscscreenstart
 
 		bit $d06f
@@ -878,74 +931,8 @@ jpgrender_clearbitmapjob
 																;       5 MODULO,    i.e., apply the MODULO field to wraparound within a limited memory space
 																;       6 DIRECTION. If set, then the address is decremented instead of incremented.
 																;       7 I/O.       If set, then I/O registers are visible during the DMA controller at $D000 – $DFFF.
-				;.byte %00000000									; Command MSB
+				.byte %00000000									; Command MSB
 
 				.word $0000
-
-; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpgrender_updatecoloursred
-			.byte $0a, $80, ($20000 >> 20), $81, ($d108 >> 20)
-			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
-			.word 240
-jpgrucr		.byte 0, 0, 0
-			.word $d108 & $ffff
-			.byte (($d108 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-			.word $0000
-
-; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpgrender_updatecoloursgreen
-			.byte $0a, $80, ($20000 >> 20), $81, ($d208 >> 20)
-			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
-			.word 240
-jpgrucg		.byte 0, 0, 0
-			.word $d208 & $ffff
-			.byte (($d208 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-			.word $0000
-
-; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpgrender_updatecoloursblue
-			.byte $0a, $80, ($20000 >> 20), $81, ($d308 >> 20)
-			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
-			.word 240
-jpgrucb		.byte 0, 0, 0
-			.word $d308 & $ffff
-			.byte (($d308 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-			.word $0000
-
-; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpgrender_updatecoloursredright
-			.byte $0a, $80, ($20000 >> 20), $81, ($d108 >> 20)
-			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
-			.word 80
-jpgrucrr	.byte 0, 0, 0
-			.word $d108 & $ffff
-			.byte (($d108 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-			.word $0000
-
-; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpgrender_updatecoloursgreenright
-			.byte $0a, $80, ($20000 >> 20), $81, ($d208 >> 20)
-			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
-			.word 80
-jpgrucgr	.byte 0, 0, 0
-			.word $d208 & $ffff
-			.byte (($d208 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-			.word $0000
-
-; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpgrender_updatecoloursblueright
-			.byte $0a, $80, ($20000 >> 20), $81, ($d308 >> 20)
-			.byte $82, 0, $83, 1, $84, 0, $85, 1, 0, 0
-			.word 80
-jpgrucbr	.byte 0, 0, 0
-			.word $d308 & $ffff
-			.byte (($d308 >> 16) & $0f) | %10000000			; turn on bit 7 for I/O when writing to $d100
-			.word $0000
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
