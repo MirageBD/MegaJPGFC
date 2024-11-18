@@ -17,43 +17,21 @@ jpg_rendinit
 		lda #$00
 		sta $d015
 
-		; WHY THE HELL DO I NEED TO FILL 2 PALETTES HERE???
+;		lda $d070										; select mapped bank with the upper 2 bits of $d070
+;		and #%00111111
+;		ora #%01000000									; select palette 1
+;		sta $d070
 
-		lda $d070										; select mapped bank with the upper 2 bits of $d070
-		and #%00111111
-		ora #%10000000									; select palette 02
-		sta $d070
-
-		ldx #$00										; set bitmap palette
-:		lda #$00
-		sta $d100,x
-		sta $d200,x
-		sta $d300,x
-		inx
-		bne :-
-
-		lda $d070										; select mapped bank with the upper 2 bits of $d070
-		and #%00111111
-		ora #%11000000									; select palette 03
-		sta $d070
-
-		ldx #$00										; set bitmap palette
-:		lda #$00
-		sta $d100,x
-		sta $d200,x
-		sta $d300,x
-		inx
-		bne :-
-
-
-
-
-
-
-
+;		ldx #$00										; set bitmap palette
+;:		lda #$00
+;		sta $d100,x
+;		sta $d200,x
+;		sta $d300,x
+;		inx
+;		bne :-
 
 		lda $d070
-		and #%11111100									; set alt palette to 2
+		and #%11111100									; bank to alternative palette
 		ora #%00000010
 		sta $d070
 
@@ -536,10 +514,10 @@ jpg_load_irq
 		phy
 		phz
 
-		ldx #$00
-:		inc $d020
-		inx
-		bne :-
+;		ldx #$00
+;:		inc $d020
+;		inx
+;		bne :-
 
 		jsr mouse_update
 		jsr keyboard_update
