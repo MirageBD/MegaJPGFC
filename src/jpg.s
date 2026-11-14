@@ -1985,18 +1985,14 @@ jpg_torgb
 		dex
 		bne jpg_torgb_loop								; if grayscale, copy Y to Cb and Cr
 		ldx #>(jpg_cbbuf-jpg_ybuf)
-:		tya
-		taz
-		lda [jpg_ypoint],z
+		ldz #$00
+:		lda [jpg_ypoint],z
 		sta jpg_grayvalue
-		tya
-		taz
 		lda jpg_grayvalue
 		sta [jpg_cbpoint],z
-		tya
-		taz
 		lda jpg_grayvalue
 		sta [jpg_crpoint],z
+		inz
 		iny
 		bne :-
 		inc jpg_ypoint+1
