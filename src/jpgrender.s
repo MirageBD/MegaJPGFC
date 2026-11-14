@@ -1,22 +1,23 @@
-.define jpg_render_rptr	$ac
-.define jpg_render_gptr	$b0
-.define jpg_render_bptr	$b4
-.define jpg_render_src	$b8
+.define jpg_render_rptr	$b0
+.define jpg_render_gptr	$b4
+.define jpg_render_bptr	$b8
+.define jpg_render_src	$bc
+.define jpg_render_add64	$c0
+.define jpg_render_add256	$c4
+.define jpg_render_addgreen	$c8
+.define jpg_render_addblue	$cc
 
-.macro JPGR_QADD_CONST ptr, amountlo, amounthi
+.macro JPGR_QCOPY source, destination
+		ldq source
+		stq destination
+.endmacro
+
+.macro JPGR_QADD pointer, increment
+		ldq pointer
+		cld
 		clc
-		lda ptr+0
-		adc #amountlo
-		sta ptr+0
-		lda ptr+1
-		adc #amounthi
-		sta ptr+1
-		lda ptr+2
-		adc #$00
-		sta ptr+2
-		lda ptr+3
-		adc #$00
-		sta ptr+3
+		adcq increment
+		stq pointer
 .endmacro
 
 screencolumn	.byte 0
@@ -28,6 +29,8 @@ jpg_fcblock
 		.endrepeat
 
 jpg_misccounter
+		.byte 0
+jpg_render_rowcount
 		.byte 0
 
 jpg_rowchars
@@ -263,6 +266,11 @@ endscreenplot
 		lda #>.hiword(jpgdata)
 		sta uidraw_scrptr+3
 
+		QSTORE32 $0040, jpg_render_add64
+		QSTORE32 $0100, jpg_render_add256
+		QSTORE32 jpg_channelbufsize, jpg_render_addgreen
+		QSTORE32 (2*jpg_channelbufsize), jpg_render_addblue
+
         rts
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
@@ -305,77 +313,26 @@ jpg_render
 		lda #>.hiword(jpg_imgbuf)
 		sta jpg_render_rptr+3
 
-		lda jpg_render_rptr+0
-		sta jpg_render_gptr+0
-		sta jpg_render_bptr+0
-		lda jpg_render_rptr+1
-		sta jpg_render_gptr+1
-		sta jpg_render_bptr+1
-		lda jpg_render_rptr+2
-		sta jpg_render_gptr+2
-		sta jpg_render_bptr+2
-		lda jpg_render_rptr+3
-		sta jpg_render_gptr+3
-		sta jpg_render_bptr+3
-		JPGR_QADD_CONST jpg_render_gptr, $00, $14	; second 5,120-byte component plane
-		JPGR_QADD_CONST jpg_render_bptr, $00, $28	; third component plane
+		JPGR_QCOPY jpg_render_rptr, jpg_render_gptr
+		JPGR_QCOPY jpg_render_rptr, jpg_render_bptr
+		JPGR_QADD jpg_render_gptr, jpg_render_addgreen
+		JPGR_QADD jpg_render_bptr, jpg_render_addblue
 
-		ldy #$08
+		lda #$08
+		sta jpg_render_rowcount
 jpg_render_rows
-		lda jpg_render_rptr+0
-		sta jpg_render_src+0
-		lda jpg_render_rptr+1
-		sta jpg_render_src+1
-		lda jpg_render_rptr+2
-		sta jpg_render_src+2
-		lda jpg_render_rptr+3
-		sta jpg_render_src+3
+		JPGR_QCOPY jpg_render_rptr, jpg_render_src
 		jsr jpg_render_copy320
-		lda jpg_render_src+0
-		sta jpg_render_rptr+0
-		lda jpg_render_src+1
-		sta jpg_render_rptr+1
-		lda jpg_render_src+2
-		sta jpg_render_rptr+2
-		lda jpg_render_src+3
-		sta jpg_render_rptr+3
+		JPGR_QCOPY jpg_render_src, jpg_render_rptr
 
-		lda jpg_render_gptr+0
-		sta jpg_render_src+0
-		lda jpg_render_gptr+1
-		sta jpg_render_src+1
-		lda jpg_render_gptr+2
-		sta jpg_render_src+2
-		lda jpg_render_gptr+3
-		sta jpg_render_src+3
+		JPGR_QCOPY jpg_render_gptr, jpg_render_src
 		jsr jpg_render_copy320
-		lda jpg_render_src+0
-		sta jpg_render_gptr+0
-		lda jpg_render_src+1
-		sta jpg_render_gptr+1
-		lda jpg_render_src+2
-		sta jpg_render_gptr+2
-		lda jpg_render_src+3
-		sta jpg_render_gptr+3
+		JPGR_QCOPY jpg_render_src, jpg_render_gptr
 
-		lda jpg_render_bptr+0
-		sta jpg_render_src+0
-		lda jpg_render_bptr+1
-		sta jpg_render_src+1
-		lda jpg_render_bptr+2
-		sta jpg_render_src+2
-		lda jpg_render_bptr+3
-		sta jpg_render_src+3
+		JPGR_QCOPY jpg_render_bptr, jpg_render_src
 		jsr jpg_render_copy320
-		lda jpg_render_src+0
-		sta jpg_render_bptr+0
-		lda jpg_render_src+1
-		sta jpg_render_bptr+1
-		lda jpg_render_src+2
-		sta jpg_render_bptr+2
-		lda jpg_render_src+3
-		sta jpg_render_bptr+3
-		dey
+		JPGR_QCOPY jpg_render_src, jpg_render_bptr
+		dec jpg_render_rowcount
 		bne jpg_render_rows
 		rts
 
@@ -389,8 +346,8 @@ jpg_render_copy256
 		inz
 		cpz #$00
 		bne jpg_render_copy256
-		JPGR_QADD_CONST jpg_render_src, $00, $01
-		JPGR_QADD_CONST uidraw_scrptr, $00, $01
+		JPGR_QADD jpg_render_src, jpg_render_add256
+		JPGR_QADD uidraw_scrptr, jpg_render_add256
 		ldz #$00
 		ldx #$40
 jpg_render_copy64
@@ -400,8 +357,8 @@ jpg_render_copy64
 		inz
 		dex
 		bne jpg_render_copy64
-		JPGR_QADD_CONST jpg_render_src, $40, $00
-		JPGR_QADD_CONST uidraw_scrptr, $40, $00
+		JPGR_QADD jpg_render_src, jpg_render_add64
+		JPGR_QADD uidraw_scrptr, jpg_render_add64
 		rts
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
