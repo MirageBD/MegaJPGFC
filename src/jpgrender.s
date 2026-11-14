@@ -1,7 +1,7 @@
-.define jpg_render_rptr	$b0
-.define jpg_render_gptr	$b4
-.define jpg_render_bptr	$b8
-.define jpg_render_src	$bc
+.define jpg_render_rptr		$b0
+.define jpg_render_gptr		$b4
+.define jpg_render_bptr		$b8
+.define jpg_render_src		$bc
 .define jpg_render_add64	$c0
 .define jpg_render_add256	$c4
 .define jpg_render_addgreen	$c8

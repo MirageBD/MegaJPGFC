@@ -5,8 +5,7 @@ jpg_error				.byte 0
 jpg_eof					.byte 0
 jpg_skipff				.byte 0
 
-jpg_filepos				.byte 0, 0, 0				; can probably get rid of this
-jpg_reslen				.word 0						; lame restart markers
+jpg_reslen				.word 0							; lame restart markers
 
 ; ang = PI/8;
 ; a1 = cos(2 * ang)					= cos(0.250 * PI)					= 0.7071067811865 * 65536			= 46340.95001184158
@@ -15,158 +14,137 @@ jpg_reslen				.word 0						; lame restart markers
 ; a4 = cos(    ang) + cos(3 * ang)	= cos(0.125 * PI) + cos(0.375 * PI)	= 1.3065629648763 * 65536 - 65536	= 20090.910466138215
 ; a5 = cos(3 * ang)					= cos(0.375 * PI)					= 0.3826834323650 * 65536			= 25079.541423478528
 
-.define jpg_a1216		46341
-.define jpg_a2216		35468
-.define jpg_a3216		jpg_a1216
-.define jpg_a4216		20091
-.define jpg_a5216		25080
+.define jpg_a1216			46341
+.define jpg_a2216			35468
+.define jpg_a3216			jpg_a1216
+.define jpg_a4216			20091
+.define jpg_a5216			25080
 
 ; f = { 10, 9.24, 7.07, 3.826, 0, -3.826, -7.07, -9.24 }
 ; F = {  0,    0,    0,     0, 0,      0,     0,   256 }
 ; S = {  0,    0,    0,     0, 0,      0,     0,   256 }
 
-.define jpg_negmlo		$0400						; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
-.define jpg_posmlo		$0500						; 2 pages
-.define jpg_negmhi		$0700
-.define jpg_posmhi		$0800						; 2 pages
+.define jpg_negmlo			$0400						; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
+.define jpg_posmlo			$0500						; 2 pages
+.define jpg_negmhi			$0700
+.define jpg_posmhi			$0800						; 2 pages
 
-/*
-.define jpg_a1lo		$2900						; cos(2a), a=pi/8
-.define jpg_a1hi		$2a00
-.define jpg_a2lo		$2b00						; cos(a) - cos(3a)
-.define jpg_a2hi		$2c00
-.define jpg_a3lo		jpg_a1lo					; cos(2a)
-.define jpg_a3hi		jpg_a1hi
-.define jpg_a4lo		$2d00						; cos(a) + cos(3a)
-.define jpg_a4hi		$2e00
-.define jpg_a4gh		$2f00
-.define jpg_a5lo		$3000						; cos(3a)
-.define jpg_a5hi		$3100
+.define jpg_a1lo			$0a00						; $0000				; cos(2a), a=pi/8
+.define jpg_a1hi			$0b00						; $0100
 
-.define jpg_sec1		$3200
-.define jpg_sec2		$3400
-.define jpg_sec3		$3600
-.define jpg_sec4		$3800
-.define jpg_sec5		$3a00
-.define jpg_sec6		$3c00
-.define jpg_sec7		$3e00						; ends $4000
-*/
+.define jpg_a2lo			$0c00						; $0200				; cos(a) - cos(3a)
+.define jpg_a2hi			$0d00						; $0300
 
-.define jpg_a1lo		$0a00	; $0000				; cos(2a), a=pi/8
-.define jpg_a1hi		$0b00	; $0100
+.define jpg_a3lo			jpg_a1lo					; cos(2a)
+.define jpg_a3hi			jpg_a1hi
 
-.define jpg_a2lo		$0c00	; $0200				; cos(a) - cos(3a)
-.define jpg_a2hi		$0d00	; $0300
+.define jpg_a4lo			$0e00						; $0400				; cos(a) + cos(3a)
+.define jpg_a4hi			$0f00						; $0500
+.define jpg_a4gh			$1000						; $0600
 
-.define jpg_a3lo		jpg_a1lo					; cos(2a)
-.define jpg_a3hi		jpg_a1hi
-
-.define jpg_a4lo		$0e00	; $0400				; cos(a) + cos(3a)
-.define jpg_a4hi		$0f00	; $0500
-.define jpg_a4gh		$1000	; $0600
-
-.define jpg_a5lo		$1100	; $0700				; cos(3a)
-.define jpg_a5hi		$1200	; $0800
+.define jpg_a5lo			$1100						; $0700				; cos(3a)
+.define jpg_a5hi			$1200						; $0800
 
 ; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
 ;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
 ;        with
 ;     f(0) = f(0) * 2 / sqrt(2) , which can be combined with the first step using the table for i=4.
 
-.define jpg_sec1		$1300	; $0900
-.define jpg_sec2		$1500
-.define jpg_sec3		$1700
-.define jpg_sec4		$1900
-.define jpg_sec5		$1b00
-.define jpg_sec6		$1d00
-.define jpg_sec7		$1f00						; ends $2100
+.define jpg_sec1			$1300						; $0900
+.define jpg_sec2			$1500
+.define jpg_sec3			$1700
+.define jpg_sec4			$1900
+.define jpg_sec5			$1b00
+.define jpg_sec6			$1d00
+.define jpg_sec7			$1f00						; ends $2100
 
-.define jpg_crtab1		$8100						; rgb conversion
-.define jpg_crtab2		$8180
-.define jpg_cbtab1		$8200
-.define jpg_cbtab2		$8280
+.define jpg_crtab1			$8100						; rgb conversion
+.define jpg_crtab2			$8180
+.define jpg_cbtab1			$8200
+.define jpg_cbtab2			$8280
 
-.define jpg_trans		$8300						; transform
+.define jpg_trans			$8300						; transform
 
-.define jpg_veclo		$8380						; vec to be quantized
-.define jpg_vechi		$83c0
+.define jpg_veclo			$8380						; vec to be quantized
+.define jpg_vechi			$83c0
 
-.define jpg_imgbuf		$50000						; 3 x 5,120-byte planes ($50000-$53bff)
+.define jpg_imgbuf			$58000						; 3 x 5,120-byte planes ($50000-$53bff)
 
-.define jpg_huffmem		$c000						; huffman trees ($c000-$c570)
+.define jpg_huffmem			$c000						; huffman trees ($c000-$c570)
 
-.define jpg_bufwidth	40							; was 40
-.define jpg_bufheight	2
+.define jpg_bufwidth		40							; was 40
+.define jpg_bufheight		2
 
 .define jpg_channelbufsize	jpg_bufwidth*8*8*jpg_bufheight
 
-.define jpg_imgbufsize	3*jpg_channelbufsize
+.define jpg_imgbufsize		3*jpg_channelbufsize
 
-.define jpg_ybuf		jpg_imgbuf+0*jpg_channelbufsize
-.define jpg_cbbuf		jpg_imgbuf+1*jpg_channelbufsize
-.define jpg_crbuf		jpg_imgbuf+2*jpg_channelbufsize
+.define jpg_ybuf			jpg_imgbuf+0*jpg_channelbufsize
+.define jpg_cbbuf			jpg_imgbuf+1*jpg_channelbufsize
+.define jpg_crbuf			jpg_imgbuf+2*jpg_channelbufsize
 
-.define jpg_point		$02
-.define jpg_dest		$04
-.define jpg_bitslo		$06							; and dequantize
-.define jpg_bitshi		$07
+.define jpg_coeff			$02a7						; 8 coefficients
+.define jpg_c0				jpg_coeff+0
+.define jpg_c1				jpg_coeff+2
+.define jpg_c2				jpg_coeff+4
+.define jpg_c3				jpg_coeff+6
+.define jpg_c4				jpg_coeff+8
+.define jpg_c5				jpg_coeff+10
+.define jpg_c6				jpg_coeff+12
+.define jpg_c7				jpg_coeff+14
 
-.define jpg_mult1lo		$08							; multiplication tables
-.define jpg_mult1hi		$0c
-.define jpg_mult2lo		$10
-.define jpg_mult2hi		$14
+.define jpg_qt0				$0340						; quantization tables
+.define jpg_qt1				jpg_qt0+64					; $0380
+.define jpg_qt2				jpg_qt0+128					; $03c0 - only use 3
 
-.define jpg_dct			$18
-.define jpg_f0			jpg_dct+0
-.define jpg_f1			jpg_dct+2
-.define jpg_f2			jpg_dct+4
-.define jpg_f3			jpg_dct+6
-.define jpg_f4			jpg_dct+8
-.define jpg_f5			jpg_dct+10
-.define jpg_f6			jpg_dct+12
-.define jpg_f7			jpg_dct+14
+.define jpg_point			$02
+.define jpg_dest			$04
+.define jpg_bitslo			$06							; and dequantize
+.define jpg_bitshi			$07
 
-.define jpg_index		$28						; idct stuff
+.define jpg_mult1lo			$08							; multiplication tables
+.define jpg_mult1hi			$0c
+.define jpg_mult2lo			$10
+.define jpg_mult2hi			$14
 
-.define jpg_t1			$2a
-.define jpg_t2			$2c
-.define jpg_t3			$2e
+.define jpg_dct				$18
+.define jpg_f0				jpg_dct+0
+.define jpg_f1				jpg_dct+2
+.define jpg_f2				jpg_dct+4
+.define jpg_f3				jpg_dct+6
+.define jpg_f4				jpg_dct+8
+.define jpg_f5				jpg_dct+10
+.define jpg_f6				jpg_dct+12
+.define jpg_f7				jpg_dct+14
 
-.define jpg_vsamp		$30							; desample
-.define jpg_hsamp		$31
+.define jpg_index			$28							; idct stuff
 
+.define jpg_t1				$2a
+.define jpg_t2				$2c
+.define jpg_t3				$2e
 
-.define jpg_coeff		$02a7						; 8 coefficients
-.define jpg_c0			jpg_coeff+0
-.define jpg_c1			jpg_coeff+2
-.define jpg_c2			jpg_coeff+4
-.define jpg_c3			jpg_coeff+6
-.define jpg_c4			jpg_coeff+8
-.define jpg_c5			jpg_coeff+10
-.define jpg_c6			jpg_coeff+12
-.define jpg_c7			jpg_coeff+14
+.define jpg_vsamp			$30							; desample
+.define jpg_hsamp			$31
 
+.define jpg_initptr			$98							; 32-bit pointer for buffer initialization
+.define jpg_outptr			$9c							; 32-bit desample destination pointer
 
-.define jpg_count		$f8							; used by getbits, addnode and decodeac
-.define jpg_temp2		$f9							; used for huffman nodes
-.define jpg_huff		$fa							; huffman pointers
-.define jpg_quantp		$fc							; quant table
-.define jpg_temp		$fe
+.define jpg_ypoint			$a0							; used in convert to rgb
+.define jpg_cbpoint			$a4
+.define jpg_crpoint			$a8
 
-.define jpg_initptr		$98							; 32-bit pointer for buffer initialization
-.define jpg_outptr		$9c							; 32-bit desample destination pointer
+.define jpg_count			$f8							; used by getbits, addnode and decodeac
+.define jpg_temp2			$f9							; used for huffman nodes
+.define jpg_huff			$fa							; huffman pointers
+.define jpg_quantp			$fc							; quant table
+.define jpg_temp			$fe
 
-
-.define jpg_notjpg		1							; errors
-.define jpg_readerr		2
-.define jpg_badqt		3
-.define jpg_badht		4
-.define jpg_headerr		5
-.define jpg_hufferr		6
-
-.define jpg_qt0			$0340						; quantization tables
-.define jpg_qt1			jpg_qt0+64					; $0380
-.define jpg_qt2			jpg_qt0+128					; $03c0 - only use 3
+.define jpg_notjpg			1							; errors
+.define jpg_readerr			2
+.define jpg_badqt			3
+.define jpg_badht			4
+.define jpg_headerr			5
+.define jpg_hufferr			6
 
 jpg_process
 
@@ -177,9 +155,6 @@ jpg_process
 		sta jpg_nbits
 
 		lda #$ff
-		sta jpg_filepos+0
-		sta jpg_filepos+1
-		sta jpg_filepos+2
 		sta jpg_reslen+0
 		sta jpg_reslen+1
 
@@ -1975,10 +1950,6 @@ ji2drcont
 ;
 ; convert to rgb
 ;
-
-.define jpg_ypoint		$a0
-.define jpg_cbpoint		$a4
-.define jpg_crpoint		$a8
 
 jpg_torgb
 		lda #<.loword(jpg_ybuf)
