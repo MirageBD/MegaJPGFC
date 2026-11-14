@@ -83,16 +83,6 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_cbbuf			jpg_imgbuf+1*jpg_channelbufsize
 .define jpg_crbuf			jpg_imgbuf+2*jpg_channelbufsize
 
-.define jpg_coeff			$02a7						; 8 coefficients
-.define jpg_c0				jpg_coeff+0
-.define jpg_c1				jpg_coeff+2
-.define jpg_c2				jpg_coeff+4
-.define jpg_c3				jpg_coeff+6
-.define jpg_c4				jpg_coeff+8
-.define jpg_c5				jpg_coeff+10
-.define jpg_c6				jpg_coeff+12
-.define jpg_c7				jpg_coeff+14
-
 .define jpg_qt0				$0340						; quantization tables
 .define jpg_qt1				jpg_qt0+64					; $0380
 .define jpg_qt2				jpg_qt0+128					; $03c0 - only use 3
@@ -123,8 +113,25 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_t2				$2c
 .define jpg_t3				$2e
 
-.define jpg_vsamp			$30							; desample
-.define jpg_hsamp			$31
+.define jpg_vsamp			$30							; desample, 1 byte
+.define jpg_hsamp			$31							; 1 byte
+
+.define jpg_count			$32							; used by getbits, addnode and decodeac, 1 byte
+.define jpg_temp2			$33							; used for huffman nodes, 1 byte
+.define jpg_huff			$34							; huffman pointers, 2 bytes
+.define jpg_quantp			$36							; quant table, 2 bytes
+.define jpg_temp			$38							; 2 bytes
+
+
+.define jpg_coeff			$40							; 8 coefficients
+.define jpg_c0				jpg_coeff+0					; check usage?
+.define jpg_c1				jpg_coeff+2					; check usage?
+.define jpg_c2				jpg_coeff+4					; check usage?
+.define jpg_c3				jpg_coeff+6					; check usage?
+.define jpg_c4				jpg_coeff+8					; check usage?
+.define jpg_c5				jpg_coeff+10				; check usage?
+.define jpg_c6				jpg_coeff+12				; check usage?
+.define jpg_c7				jpg_coeff+14				; check usage?
 
 .define jpg_initptr			$98							; 32-bit pointer for buffer initialization
 .define jpg_outptr			$9c							; 32-bit desample destination pointer
@@ -132,12 +139,6 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_ypoint			$a0							; used in convert to rgb
 .define jpg_cbpoint			$a4
 .define jpg_crpoint			$a8
-
-.define jpg_count			$f8							; used by getbits, addnode and decodeac
-.define jpg_temp2			$f9							; used for huffman nodes
-.define jpg_huff			$fa							; huffman pointers
-.define jpg_quantp			$fc							; quant table
-.define jpg_temp			$fe
 
 .define jpg_notjpg			1							; errors
 .define jpg_readerr			2
@@ -1231,6 +1232,7 @@ jpg_prepdat
 			sta jpg_bitslo
 			lda f+1
 			jsr jpg_pmult
+			
 			sta f+1
 			lda jpg_bitslo
 			sta f+0
@@ -1416,50 +1418,50 @@ jpg_idct
 ;          f(7) <- f(1) - f(7)
 ;          f(3) <- f(5) + f(3)
 
-		lda jpg_f5
+		lda jpg_f5+0
 		sec
-		sbc jpg_f3
-		sta jpg_t1
+		sbc jpg_f3+0
+		sta jpg_t1+0
 		lda jpg_f5+1
 		sbc jpg_f3+1
 		sta jpg_t1+1
 
-		lda jpg_f1
+		lda jpg_f1+0
 		clc
-		adc jpg_f7
-		sta jpg_t2
+		adc jpg_f7+0
+		sta jpg_t2+0
 		lda jpg_f1+1
 		adc jpg_f7+1
 		sta jpg_t2+1
 
-		lda jpg_f1
+		lda jpg_f1+0
 		sec
-		sbc jpg_f7
-		sta jpg_t3
+		sbc jpg_f7+0
+		sta jpg_t3+0
 		lda jpg_f1+1
 		sbc jpg_f7+1
 		sta jpg_t3+1
 
-		lda jpg_f5
+		lda jpg_f5+0
 		clc
-		adc jpg_f3
-		sta jpg_f3
+		adc jpg_f3+0
+		sta jpg_f3+0
 		lda jpg_f5+1
 		adc jpg_f3+1
 		sta jpg_f3+1
 
-		lda jpg_t3
-		sta jpg_f7
+		lda jpg_t3+0
+		sta jpg_f7+0
 		lda jpg_t3+1
 		sta jpg_f7+1
 
-		lda jpg_t2
-		sta jpg_f1
+		lda jpg_t2+0
+		sta jpg_f1+0
 		lda jpg_t2+1
 		sta jpg_f1+1
 
-		lda jpg_t1
-		sta jpg_f5
+		lda jpg_t1+0
+		sta jpg_f5+0
 		lda jpg_t1+1
 		sta jpg_f5+1
 
@@ -1468,45 +1470,45 @@ jpg_idct
 ;          f(1) <- f(1) - f(3)
 ;          f(3) <- f(1) + f(3)
 
-		lda jpg_f2
+		lda jpg_f2+0
 		sec
-		sbc jpg_f6
-		sta jpg_t1
+		sbc jpg_f6+0
+		sta jpg_t1+0
 		lda jpg_f2+1
 		sbc jpg_f6+1
 		sta jpg_t1+1
 
-		lda jpg_f2
+		lda jpg_f2+0
 		clc
-		adc jpg_f6
-		sta jpg_f6
+		adc jpg_f6+0
+		sta jpg_f6+0
 		lda jpg_f2+1
 		adc jpg_f6+1
 		sta jpg_f6+1
 
-		lda jpg_t1
-		sta jpg_f2
+		lda jpg_t1+0
+		sta jpg_f2+0
 		lda jpg_t1+1
 		sta jpg_f2+1
 
-		lda jpg_f1
+		lda jpg_f1+0
 		sec
-		sbc jpg_f3
-		sta jpg_t1
+		sbc jpg_f3+0
+		sta jpg_t1+0
 		lda jpg_f1+1
 		sbc jpg_f3+1
 		sta jpg_t1+1
 
-		lda jpg_f1
+		lda jpg_f1+0
 		clc
-		adc jpg_f3
-		sta jpg_f3
+		adc jpg_f3+0
+		sta jpg_f3+0
 		lda jpg_f1+1
 		adc jpg_f3+1
 		sta jpg_f3+1
 
-		lda jpg_t1
-		sta jpg_f1
+		lda jpg_t1+0
+		sta jpg_f1+0
 		lda jpg_t1+1
 		sta jpg_f1+1
 
@@ -1518,7 +1520,7 @@ jpg_idct
 
 ; f(2) <- a1*f(2)
 
-		ldx jpg_f2									; lo
+		ldx jpg_f2+0								; lo
 		ldy jpg_f2+1								; hi
 		lda jpg_a1lo,y
 		clc
@@ -1536,11 +1538,11 @@ jpg_idct
 		sbc #>jpg_a1216
 :		sta jpg_f2+1
 		lda jpg_bitslo
-		sta jpg_f2
+		sta jpg_f2+0
 
 ; f(1) = a3*f(1)
 
-		ldx jpg_f1									; lo
+		ldx jpg_f1+0								; lo
 		ldy jpg_f1+1								; hi
 		lda jpg_a3lo,y
 		clc
@@ -1558,13 +1560,13 @@ jpg_idct
 		sbc #>jpg_a3216
 :		sta jpg_f1+1
 		lda jpg_bitslo
-		sta jpg_f1
+		sta jpg_f1+0
 
 ; t1 = -a5*(f(5) + f(7))
 
-		lda jpg_f5
+		lda jpg_f5+0
 		clc
-		adc jpg_f7
+		adc jpg_f7+0
 		tax											; lo
 		lda jpg_f5+1
 		adc jpg_f7+1
@@ -1588,7 +1590,7 @@ jpg_idct
 		eor #$ff
 		clc
 		adc #01
-		sta jpg_t1
+		sta jpg_t1+0
 		lda jpg_bitshi
 		eor #$ff
 		adc #00
@@ -1596,7 +1598,7 @@ jpg_idct
 
 ; f(5) = t1 - a2*f(5)
 
-		ldx jpg_f5									; lo
+		ldx jpg_f5+0								; lo
 		ldy jpg_f5+1								; hi
 		lda jpg_a2lo,y
 		clc
@@ -1613,17 +1615,17 @@ jpg_idct
 		lda jpg_bitshi
 		sbc #>jpg_a2216
 :		sta jpg_bitshi
-		lda jpg_t1
+		lda jpg_t1+0
 		sec
 		sbc jpg_bitslo
-		sta jpg_f5
+		sta jpg_f5+0
 		lda jpg_t1+1
 		sbc jpg_bitshi
 		sta jpg_f5+1
 
 ; f(7) = a4*f(7) + t1
 
-		ldx jpg_f7									; lo
+		ldx jpg_f7+0								; lo
 		ldy jpg_f7+1								; hi
 		lda jpg_a4lo,y
 		clc
@@ -1642,8 +1644,8 @@ jpg_idct
 :		sta jpg_bitshi
 		lda jpg_bitslo
 		clc
-		adc jpg_t1
-		sta jpg_f7
+		adc jpg_t1+0
+		sta jpg_f7+0
 		lda jpg_bitshi
 		adc jpg_t1+1
 		sta jpg_f7+1
@@ -1653,31 +1655,31 @@ jpg_idct
 ;   f(4) <- f(0) - f(4)
 ;   f(6) <- f(2) + f(6)
 
-		lda jpg_f0
+		lda jpg_f0+0
 		clc
-		adc jpg_f4
-		sta jpg_t1
+		adc jpg_f4+0
+		sta jpg_t1+0
 		lda jpg_f0+1
 		adc jpg_f4+1
 		sta jpg_t1+1
 
-		lda jpg_f0
+		lda jpg_f0+0
 		sec
-		sbc jpg_f4
-		sta jpg_f4
+		sbc jpg_f4+0
+		sta jpg_f4+0
 		lda jpg_f0+1
 		sbc jpg_f4+1
 		sta jpg_f4+1
 
-		lda jpg_t1
-		sta jpg_f0
+		lda jpg_t1+0
+		sta jpg_f0+0
 		lda jpg_t1+1
 		sta jpg_f0+1
 
-		lda jpg_f2
+		lda jpg_f2+0
 		clc
-		adc jpg_f6
-		sta jpg_f6
+		adc jpg_f6+0
+		sta jpg_f6+0
 		lda jpg_f2+1
 		adc jpg_f6+1
 		sta jpg_f6+1
@@ -1692,74 +1694,74 @@ jpg_idct
 ;   f(1) <- f(1) - f(5)
 ;   f(5) <- -f(5)
 
-		lda jpg_f0
+		lda jpg_f0+0
 		clc
-		adc jpg_f6
-		sta jpg_t1
+		adc jpg_f6+0
+		sta jpg_t1+0
 		lda jpg_f0+1
 		adc jpg_f6+1
 		sta jpg_t1+1
 
-		lda jpg_f0
+		lda jpg_f0+0
 		sec
-		sbc jpg_f6
-		sta jpg_f6
+		sbc jpg_f6+0
+		sta jpg_f6+0
 		lda jpg_f0+1
 		sbc jpg_f6+1
 		sta jpg_f6+1
-		lda jpg_t1
-		sta jpg_f0
+		lda jpg_t1+0
+		sta jpg_f0+0
 		lda jpg_t1+1
 		sta jpg_f0+1
 
-		lda jpg_f4
+		lda jpg_f4+0
 		clc
-		adc jpg_f2
-		sta jpg_t1
+		adc jpg_f2+0
+		sta jpg_t1+0
 		lda jpg_f4+1
 		adc jpg_f2+1
 		sta jpg_t1+1
 
-		lda jpg_f4
+		lda jpg_f4+0
 		sec
-		sbc jpg_f2
-		sta jpg_f2
+		sbc jpg_f2+0
+		sta jpg_f2+0
 		lda jpg_f4+1
 		sbc jpg_f2+1
 		sta jpg_f2+1
-		lda jpg_t1
-		sta jpg_f4
+		lda jpg_t1+0
+		sta jpg_f4+0
 		lda jpg_t1+1
 		sta jpg_f4+1
 
-		lda jpg_f3
+		lda jpg_f3+0
 		clc
-		adc jpg_f7
-		sta jpg_f3
+		adc jpg_f7+0
+		sta jpg_f3+0
 		lda jpg_f3+1
 		adc jpg_f7+1
 		sta jpg_f3+1
 
-		lda jpg_f7
+		lda jpg_f7+0
 		clc
-		adc jpg_f1
-		sta jpg_f7
+		adc jpg_f1+0
+		sta jpg_f7+0
 		lda jpg_f7+1
 		adc jpg_f1+1
 		sta jpg_f7+1
 
-		lda jpg_f1
+		lda jpg_f1+0
 		sec
-		sbc jpg_f5
-		sta jpg_f1
+		sbc jpg_f5+0
+		sta jpg_f1+0
 		lda jpg_f1+1
 		sbc jpg_f5+1
 		sta jpg_f1+1
 
 		lda #00
 		sec
-		sbc jpg_f5
-		sta jpg_f5
+		sbc jpg_f5+0
+		sta jpg_f5+0
 		lda #00
 		sbc jpg_f5+1
 		sta jpg_f5+1
@@ -1776,66 +1778,66 @@ jpg_idct
 ;
 ; note: values are offset -128
 
-		lda jpg_f0
+		lda jpg_f0+0
 		clc
-		adc jpg_f3
-		sta jpg_c0
+		adc jpg_f3+0
+		sta jpg_c0+0
 		lda jpg_f0+1
 		adc jpg_f3+1
 		sta jpg_c0+1
 
-		lda jpg_f4
+		lda jpg_f4+0
 		clc
-		adc jpg_f7
-		sta jpg_c1
+		adc jpg_f7+0
+		sta jpg_c1+0
 		lda jpg_f4+1
 		adc jpg_f7+1
 		sta jpg_c1+1
 
-		lda jpg_f2
+		lda jpg_f2+0
 		clc
-		adc jpg_f1
-		sta jpg_c2
+		adc jpg_f1+0
+		sta jpg_c2+0
 		lda jpg_f2+1
 		adc jpg_f1+1
 		sta jpg_c2+1
 
-		lda jpg_f6
+		lda jpg_f6+0
 		clc
-		adc jpg_f5
-		sta jpg_c3
+		adc jpg_f5+0
+		sta jpg_c3+0
 		lda jpg_f6+1
 		adc jpg_f5+1
 		sta jpg_c3+1
 
-		lda jpg_f6
+		lda jpg_f6+0
 		sec
-		sbc jpg_f5
-		sta jpg_c4
+		sbc jpg_f5+0
+		sta jpg_c4+0
 		lda jpg_f6+1
 		sbc jpg_f5+1
 		sta jpg_c4+1
 
-		lda jpg_f2
+		lda jpg_f2+0
 		sec
-		sbc jpg_f1
-		sta jpg_c5
+		sbc jpg_f1+0
+		sta jpg_c5+0
 		lda jpg_f2+1
 		sbc jpg_f1+1
 		sta jpg_c5+1
 
-		lda jpg_f4
+		lda jpg_f4+0
 		sec
-		sbc jpg_f7
-		sta jpg_c6
+		sbc jpg_f7+0
+		sta jpg_c6+0
 		lda jpg_f4+1
 		sbc jpg_f7+1
 		sta jpg_c6+1
 
-		lda jpg_f0
+		lda jpg_f0+0
 		sec
-		sbc jpg_f3
-		sta jpg_c7
+		sbc jpg_f3+0
+		sta jpg_c7+0
 		lda jpg_f0+1
 		sbc jpg_f3+1
 		sta jpg_c7+1
