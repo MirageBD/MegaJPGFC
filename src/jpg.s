@@ -121,6 +121,7 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_huff			$34							; huffman pointers, 2 bytes
 .define jpg_quantp			$36							; quant table, 2 bytes
 .define jpg_temp			$38							; 2 bytes
+.define jpg_grayvalue		$3a							; grayscale byte while copying to chroma planes
 
 
 .define jpg_coeff			$40							; 8 coefficients
@@ -1987,15 +1988,14 @@ jpg_torgb
 :		tya
 		taz
 		lda [jpg_ypoint],z
-		pha
+		sta jpg_grayvalue
 		tya
 		taz
-		pla
+		lda jpg_grayvalue
 		sta [jpg_cbpoint],z
-		pha
 		tya
 		taz
-		pla
+		lda jpg_grayvalue
 		sta [jpg_crpoint],z
 		iny
 		bne :-

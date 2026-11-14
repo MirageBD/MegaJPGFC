@@ -325,7 +325,6 @@ jpg_render_copy256
 		JPGR_REVERSE_NIBBLE
 		sta [uidraw_scrptr],z
 		inz
-		cpz #$00
 		bne jpg_render_copy256
 		JPGR_QADD jpg_render_src, jpg_render_add256
 		JPGR_QADD uidraw_scrptr, jpg_render_add256
