@@ -20,6 +20,15 @@
 		stq pointer
 .endmacro
 
+.macro JPGR_REVERSE_NIBBLE
+		asl a
+		adc #$80
+		rol a
+		asl a
+		adc #$80
+		rol a
+.endmacro
+
 screencolumn	.byte 0
 screenrow		.byte 0
 
@@ -275,34 +284,6 @@ endscreenplot
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-reversenibble	; 	(byte)((b >> 4) | ((b & 15) << 4));
-
-			asl a						; swap nybbles
-			adc #$80
-			rol a
-			asl a
-			adc #$80
-			rol a
-
-/*
-	pha
-	lsr
-	lsr
-	lsr
-	lsr
-	sta highnibble
-	pla
-	asl
-	asl
-	asl
-	asl
-	ora highnibble
-*/	
-	rts
-
-highnibble
-.byte 0
-
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
 jpg_render
@@ -341,7 +322,7 @@ jpg_render_copy320
 		ldz #$00
 jpg_render_copy256
 :		lda [jpg_render_src],z
-		jsr reversenibble
+		JPGR_REVERSE_NIBBLE
 		sta [uidraw_scrptr],z
 		inz
 		cpz #$00
@@ -352,7 +333,7 @@ jpg_render_copy256
 		ldx #$40
 jpg_render_copy64
 :		lda [jpg_render_src],z
-		jsr reversenibble
+		JPGR_REVERSE_NIBBLE
 		sta [uidraw_scrptr],z
 		inz
 		dex
