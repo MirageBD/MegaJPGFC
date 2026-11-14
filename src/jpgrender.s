@@ -248,6 +248,14 @@ endscreenplot
 
 reversenibble	; 	(byte)((b >> 4) | ((b & 15) << 4));
 
+			asl a						; swap nybbles
+			adc #$80
+			rol a
+			asl a
+			adc #$80
+			rol a
+
+/*
 	pha
 	lsr
 	lsr
@@ -260,6 +268,7 @@ reversenibble	; 	(byte)((b >> 4) | ((b & 15) << 4));
 	asl
 	asl
 	ora highnibble
+*/	
 	rts
 
 highnibble
