@@ -91,7 +91,7 @@ jpg_reslen				.word 0						; lame restart markers
 .define jpg_veclo		$8380						; vec to be quantized
 .define jpg_vechi		$83c0
 
-.define jpg_imgbuf		$8400						; image data buffer $8700+3*$1300=$c000
+.define jpg_imgbuf		$50000						; 3 x 5,120-byte planes ($50000-$53bff)
 
 .define jpg_huffmem		$c000						; huffman trees ($c000-$c570)
 
@@ -102,9 +102,9 @@ jpg_reslen				.word 0						; lame restart markers
 
 .define jpg_imgbufsize	3*jpg_channelbufsize
 
-.define jpg_ybuf		jpg_imgbuf+0*jpg_channelbufsize			; $8700
-.define jpg_cbbuf		jpg_imgbuf+1*jpg_channelbufsize			; $9a00
-.define jpg_crbuf		jpg_imgbuf+2*jpg_channelbufsize			; $ad00
+.define jpg_ybuf		jpg_imgbuf+0*jpg_channelbufsize
+.define jpg_cbbuf		jpg_imgbuf+1*jpg_channelbufsize
+.define jpg_crbuf		jpg_imgbuf+2*jpg_channelbufsize
 
 .define jpg_point		$02
 .define jpg_dest		$04
@@ -152,6 +152,9 @@ jpg_reslen				.word 0						; lame restart markers
 .define jpg_huff		$fa							; huffman pointers
 .define jpg_quantp		$fc							; quant table
 .define jpg_temp		$fe
+
+.define jpg_initptr		$98							; 32-bit pointer for buffer initialization
+.define jpg_outptr		$9c							; 32-bit desample destination pointer
 
 
 .define jpg_notjpg		1							; errors
@@ -237,18 +240,24 @@ jpg_err1
 
 jpg_initbuff
 
-		lda #<jpg_imgbuf
-		sta jpg_point+0
-		lda #>jpg_imgbuf
-		sta jpg_point+1
+		lda #<.loword(jpg_imgbuf)
+		sta jpg_initptr+0
+		lda #>.loword(jpg_imgbuf)
+		sta jpg_initptr+1
+		lda #<.hiword(jpg_imgbuf)
+		sta jpg_initptr+2
+		lda #>.hiword(jpg_imgbuf)
+		sta jpg_initptr+3
 		ldx #>(jpg_imgbufsize)
 		lda #$80
 		ldy #$00
+		ldz #$00
 jpgibloop
-		sta (jpg_point),y
+		sta [jpg_initptr],z
+		inz
 		dey
 		bne jpgibloop
-		inc jpg_point+1
+		inc jpg_initptr+1
 		dex
 		bne jpgibloop
 		rts
@@ -1967,32 +1976,54 @@ ji2drcont
 ; convert to rgb
 ;
 
-.define jpg_ypoint		jpg_point
-.define jpg_cbpoint		jpg_dest
-.define jpg_crpoint		jpg_bitslo
+.define jpg_ypoint		$a0
+.define jpg_cbpoint		$a4
+.define jpg_crpoint		$a8
 
 jpg_torgb
-		lda #<(jpg_ybuf)
+		lda #<.loword(jpg_ybuf)
 		sta jpg_ypoint+0
-		lda #>(jpg_ybuf)
+		lda #>.loword(jpg_ybuf)
 		sta jpg_ypoint+1
-		lda #<(jpg_cbbuf)
+		lda #<.hiword(jpg_ybuf)
+		sta jpg_ypoint+2
+		lda #>.hiword(jpg_ybuf)
+		sta jpg_ypoint+3
+		lda #<.loword(jpg_cbbuf)
 		sta jpg_cbpoint+0
-		lda #>(jpg_cbbuf)
+		lda #>.loword(jpg_cbbuf)
 		sta jpg_cbpoint+1
-		lda #<(jpg_crbuf)
+		lda #<.hiword(jpg_cbbuf)
+		sta jpg_cbpoint+2
+		lda #>.hiword(jpg_cbbuf)
+		sta jpg_cbpoint+3
+		lda #<.loword(jpg_crbuf)
 		sta jpg_crpoint+0
-		lda #>(jpg_crbuf)
+		lda #>.loword(jpg_crbuf)
 		sta jpg_crpoint+1
+		lda #<.hiword(jpg_crbuf)
+		sta jpg_crpoint+2
+		lda #>.hiword(jpg_crbuf)
+		sta jpg_crpoint+3
 
 		ldy #00
 		ldx jpg_ncomps
 		dex
 		bne jpg_torgb_loop								; if grayscale, copy Y to Cb and Cr
 		ldx #>(jpg_cbbuf-jpg_ybuf)
-:		lda (jpg_ypoint),y
-		sta (jpg_cbpoint),y
-		sta (jpg_crpoint),y
+:		tya
+		taz
+		lda [jpg_ypoint],z
+		pha
+		tya
+		taz
+		pla
+		sta [jpg_cbpoint],z
+		pha
+		tya
+		taz
+		pla
+		sta [jpg_crpoint],z
 		iny
 		bne :-
 		inc jpg_ypoint+1
@@ -2005,20 +2036,26 @@ jpg_torgb
 jpg_torgb_loop
 		lda #00
 		sta jpg_temp+1
-		lda (jpg_cbpoint),y
+		tya
+		taz
+		lda [jpg_cbpoint],z
 		eor #$80
 		bpl jpg_torgb_poscb
 		eor #$ff ; negcb
 		clc
 		adc #01
 		tax
-		lda (jpg_ypoint),y
+		tya
+		taz
+		lda [jpg_ypoint],z
 		clc
 		adc jpg_cbtab1,x
 		sta jpg_temp+0
 		bcc :+
 		inc jpg_temp+1								; high byte
-:		lda (jpg_ypoint),y
+:		tya
+		taz
+		lda [jpg_ypoint],z
 		sec
 		sbc jpg_cbtab2,x
 		bcs jpg_torgb_cont
@@ -2027,13 +2064,17 @@ jpg_torgb_loop
 
 jpg_torgb_poscb
 		tax
-		lda (jpg_ypoint),y
+		tya
+		taz
+		lda [jpg_ypoint],z
 		sec
 		sbc jpg_cbtab1,x
 		sta jpg_temp+0
 		bcs :+
 		dec jpg_temp+1
-:		lda (jpg_ypoint),y
+:		tya
+		taz
+		lda [jpg_ypoint],z
 		clc
 		adc jpg_cbtab2,x
 		bcc jpg_torgb_cont
@@ -2041,7 +2082,9 @@ jpg_torgb_poscb
 jpg_torgb_cont
 		sta jpg_temp2
 
-		lda (jpg_crpoint),y
+		tya
+		taz
+		lda [jpg_crpoint],z
 		eor #$80
 		bpl jpg_torgb_poscr
 		eor #$ff ; negcr
@@ -2061,8 +2104,14 @@ jpg_torgb_cont
 :		lda #255
 		.byte $2c									; BIT $xxxx
 :		lda jpg_temp
-		sta (jpg_cbpoint),y							; green
-		lda (jpg_ypoint),y
+		pha
+		tya
+		taz
+		pla
+		sta [jpg_cbpoint],z							; green
+		tya
+		taz
+		lda [jpg_ypoint],z
 		sec
 		sbc jpg_crtab1,x
 		bcs jpg_torgb_done
@@ -2084,17 +2133,31 @@ jpg_torgb_poscr
 :		lda #255
 		.byte $2c									; BIT $xxxx
 :		lda jpg_temp
-		sta (jpg_cbpoint),y
-		lda (jpg_ypoint),y
+		pha
+		tya
+		taz
+		pla
+		sta [jpg_cbpoint],z
+		tya
+		taz
+		lda [jpg_ypoint],z
 		clc
 		adc jpg_crtab1,x
 		bcc jpg_torgb_done
 		lda #255
 
 jpg_torgb_done
-		sta (jpg_ypoint),y							; red
+		pha
+		tya
+		taz
+		pla
+		sta [jpg_ypoint],z							; red
 		lda jpg_temp2
-		sta (jpg_crpoint),y							; blue
+		pha
+		tya
+		taz
+		pla
+		sta [jpg_crpoint],z							; blue
 		iny
 		beq :++
 :		jmp jpg_torgb_loop
@@ -2133,7 +2196,11 @@ jpg_desample_oldrow
 		ldx jpg_hsamp
 
 jpg_desample_expand
-		sta (jpg_dest),y
+		pha
+		tya
+		taz
+		pla
+		sta [jpg_outptr],z
 		iny
 		dex
 		bne jpg_desample_expand
@@ -2142,12 +2209,18 @@ jpg_desample_expand
 		bne :-
 
 		clc											; next scanline
-		lda jpg_dest+0
+		lda jpg_outptr+0
 		adc jpg_linelen+0
-		sta jpg_dest+0
-		lda jpg_dest+1
+		sta jpg_outptr+0
+		lda jpg_outptr+1
 		adc jpg_linelen+1
-		sta jpg_dest+1
+		sta jpg_outptr+1
+		lda jpg_outptr+2
+		adc #$00
+		sta jpg_outptr+2
+		lda jpg_outptr+3
+		adc #$00
+		sta jpg_outptr+3
 
 		sec
 		lda jpg_temp2
@@ -2292,7 +2365,7 @@ jpg_dequantize_high
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpg_curbuf		.word 0
+jpg_curbuf		.byte 0, 0, 0, 0
 jpg_rend		.byte 0
 ;jpg_currow		.byte 0
 jpg_curcol		.byte 0
@@ -2316,6 +2389,14 @@ jpg_fetch											; fetch the data
 		lda jpg_curbuf+1
 		adc jpg_dest+1
 		sta jpg_dest+1
+		lda jpg_dest+0
+		sta jpg_outptr+0
+		lda jpg_dest+1
+		sta jpg_outptr+1
+		lda jpg_curbuf+2
+		sta jpg_outptr+2
+		lda jpg_curbuf+3
+		sta jpg_outptr+3
 
 :decode
 		jsr jpg_decodedc
@@ -2355,6 +2436,10 @@ jpg_coloff		.byte 0								; col offset
 jpg_readdataunit
 		sta jpg_curbuf+0
 		sty jpg_curbuf+1
+		lda #<.hiword(jpg_imgbuf)
+		sta jpg_curbuf+2
+		lda #>.hiword(jpg_imgbuf)
+		sta jpg_curbuf+3
 		stx jpg_curcomp								; 1 for Y, 2 for Cb, 3 for Cr
 
 		lda #00

@@ -1,3 +1,24 @@
+.define jpg_render_rptr	$ac
+.define jpg_render_gptr	$b0
+.define jpg_render_bptr	$b4
+.define jpg_render_src	$b8
+
+.macro JPGR_QADD_CONST ptr, amountlo, amounthi
+		clc
+		lda ptr+0
+		adc #amountlo
+		sta ptr+0
+		lda ptr+1
+		adc #amounthi
+		sta ptr+1
+		lda ptr+2
+		adc #$00
+		sta ptr+2
+		lda ptr+3
+		adc #$00
+		sta ptr+3
+.endmacro
+
 screencolumn	.byte 0
 screenrow		.byte 0
 
@@ -277,241 +298,111 @@ highnibble
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
 jpg_render
+		sta jpg_render_rptr+0
+		sty jpg_render_rptr+1
+		lda #<.hiword(jpg_imgbuf)
+		sta jpg_render_rptr+2
+		lda #>.hiword(jpg_imgbuf)
+		sta jpg_render_rptr+3
 
-		sta jpgrnd_red+1
-		sta jpgrnd_redright+1
-		sta jpgrnd_green+1
-		sta jpgrnd_greenright+1
-		sta jpgrnd_blue+1
-		sta jpgrnd_blueright+1
-		tya
-		clc
-		adc #>(0*jpg_channelbufsize)					; $8400 + 0 * $1400
-		sta jpgrnd_red+2
-		sta jpgrnd_redright+2
-		clc
-		adc #>(1*jpg_channelbufsize)					; $8400 + 1 * $1400
-		sta jpgrnd_green+2
-		sta jpgrnd_greenright+2
-		clc
-		adc #>(1*jpg_channelbufsize)					; $8400 + 2 * $1400
-		sta jpgrnd_blue+2
-		sta jpgrnd_blueright+2
+		lda jpg_render_rptr+0
+		sta jpg_render_gptr+0
+		sta jpg_render_bptr+0
+		lda jpg_render_rptr+1
+		sta jpg_render_gptr+1
+		sta jpg_render_bptr+1
+		lda jpg_render_rptr+2
+		sta jpg_render_gptr+2
+		sta jpg_render_bptr+2
+		lda jpg_render_rptr+3
+		sta jpg_render_gptr+3
+		sta jpg_render_bptr+3
+		JPGR_QADD_CONST jpg_render_gptr, $00, $14	; second 5,120-byte component plane
+		JPGR_QADD_CONST jpg_render_bptr, $00, $28	; third component plane
 
-		inc jpgrnd_redright+2
-		inc jpgrnd_greenright+2
-		inc jpgrnd_blueright+2
+		ldy #$08
+jpg_render_rows
+		lda jpg_render_rptr+0
+		sta jpg_render_src+0
+		lda jpg_render_rptr+1
+		sta jpg_render_src+1
+		lda jpg_render_rptr+2
+		sta jpg_render_src+2
+		lda jpg_render_rptr+3
+		sta jpg_render_src+3
+		jsr jpg_render_copy320
+		lda jpg_render_src+0
+		sta jpg_render_rptr+0
+		lda jpg_render_src+1
+		sta jpg_render_rptr+1
+		lda jpg_render_src+2
+		sta jpg_render_rptr+2
+		lda jpg_render_src+3
+		sta jpg_render_rptr+3
 
-		ldy #$00
+		lda jpg_render_gptr+0
+		sta jpg_render_src+0
+		lda jpg_render_gptr+1
+		sta jpg_render_src+1
+		lda jpg_render_gptr+2
+		sta jpg_render_src+2
+		lda jpg_render_gptr+3
+		sta jpg_render_src+3
+		jsr jpg_render_copy320
+		lda jpg_render_src+0
+		sta jpg_render_gptr+0
+		lda jpg_render_src+1
+		sta jpg_render_gptr+1
+		lda jpg_render_src+2
+		sta jpg_render_gptr+2
+		lda jpg_render_src+3
+		sta jpg_render_gptr+3
 
-jpgrend_getrgb
+		lda jpg_render_bptr+0
+		sta jpg_render_src+0
+		lda jpg_render_bptr+1
+		sta jpg_render_src+1
+		lda jpg_render_bptr+2
+		sta jpg_render_src+2
+		lda jpg_render_bptr+3
+		sta jpg_render_src+3
+		jsr jpg_render_copy320
+		lda jpg_render_src+0
+		sta jpg_render_bptr+0
+		lda jpg_render_src+1
+		sta jpg_render_bptr+1
+		lda jpg_render_src+2
+		sta jpg_render_bptr+2
+		lda jpg_render_src+3
+		sta jpg_render_bptr+3
+		dey
+		bne jpg_render_rows
+		rts
 
-		ldx #$00
+; Copy 320 bytes from the long source pointer into the next RGB output plane.
+jpg_render_copy320
 		ldz #$00
-jpgrnd_red
-:		lda $babe,x										; copy 256 red colours
+jpg_render_copy256
+:		lda [jpg_render_src],z
 		jsr reversenibble
 		sta [uidraw_scrptr],z
-		inx
 		inz
 		cpz #$00
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$00
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$01
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-		ldx #$00
+		bne jpg_render_copy256
+		JPGR_QADD_CONST jpg_render_src, $00, $01
+		JPGR_QADD_CONST uidraw_scrptr, $00, $01
 		ldz #$00
-jpgrnd_redright
-:		lda $babe,x										; copy 64 red colours
+		ldx #$40
+jpg_render_copy64
+:		lda [jpg_render_src],z
 		jsr reversenibble
 		sta [uidraw_scrptr],z
-		inx
 		inz
-		cpz #64
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$40
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$00
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-		ldx #$00
-		ldz #$00
-jpgrnd_green
-:		lda $babe,x
-		jsr reversenibble
-		sta [uidraw_scrptr],z
-		inx
-		inz
-		cpz #$00
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$00
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$01
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-		ldx #$00
-		ldz #$00
-jpgrnd_greenright
-:		lda $babe,x										; copy 64 green colours
-		jsr reversenibble
-		sta [uidraw_scrptr],z
-		inx
-		inz
-		cpz #64
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$40
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$00
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-		ldx #$00
-		ldz #$00
-jpgrnd_blue
-:		lda $babe,x
-		jsr reversenibble
-		sta [uidraw_scrptr],z
-		inx
-		inz
-		cpz #$00
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$00
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$01
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-		ldx #$00
-		ldz #$00
-jpgrnd_blueright
-:		lda $babe,x										; copy 64 blue colours
-		jsr reversenibble
-		sta [uidraw_scrptr],z
-		inx
-		inz
-		cpz #64
-		bne :-
-
-		clc
-		lda uidraw_scrptr+0
-		adc #$40
-		sta uidraw_scrptr+0
-		lda uidraw_scrptr+1
-		adc #$00
-		sta uidraw_scrptr+1
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-		lda uidraw_scrptr+2
-		adc #$00
-		sta uidraw_scrptr+2
-
-
-		clc
-		lda jpgrnd_red+1
-		adc #<(jpg_bufwidth*8)							; add 8*bufwidth to get to next row in jpg data
-		sta jpgrnd_red+1
-		lda jpgrnd_red+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_red+2
-
-		clc
-		lda jpgrnd_green+1
-		adc #<(jpg_bufwidth*8)
-		sta jpgrnd_green+1
-		lda jpgrnd_green+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_green+2
-
-		clc
-		lda jpgrnd_blue+1
-		adc #<(jpg_bufwidth*8)
-		sta jpgrnd_blue+1
-		lda jpgrnd_blue+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_blue+2
-
-		clc
-		lda jpgrnd_redright+1
-		adc #<(jpg_bufwidth*8)
-		sta jpgrnd_redright+1
-		lda jpgrnd_redright+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_redright+2
-
-		clc
-		lda jpgrnd_greenright+1
-		adc #<(jpg_bufwidth*8)
-		sta jpgrnd_greenright+1
-		lda jpgrnd_greenright+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_greenright+2
-
-		clc
-		lda jpgrnd_blueright+1
-		adc #<(jpg_bufwidth*8)
-		sta jpgrnd_blueright+1
-		lda jpgrnd_blueright+2
-		adc #>(jpg_bufwidth*8)
-		sta jpgrnd_blueright+2
-
-		iny
-		cpy #8
-		beq :+
-		
-		jmp jpgrend_getrgb
-
-:		rts
+		dex
+		bne jpg_render_copy64
+		JPGR_QADD_CONST jpg_render_src, $40, $00
+		JPGR_QADD_CONST uidraw_scrptr, $40, $00
+		rts
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
