@@ -121,6 +121,7 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_huff			$34							; huffman pointers, 2 bytes
 .define jpg_quantp			$36							; quant table, 2 bytes
 .define jpg_temp			$38							; 2 bytes
+.define jpg_yvalue			$3a							; cached luminance during RGB conversion
 
 
 .define jpg_coeff			$40							; 8 coefficients
@@ -2003,6 +2004,8 @@ jpg_torgb_loop
 		sta jpg_temp+1
 		tya
 		taz
+		lda [jpg_ypoint],z
+		sta jpg_yvalue
 		lda [jpg_cbpoint],z
 		eor #$80
 		bpl jpg_torgb_poscb
@@ -2010,13 +2013,13 @@ jpg_torgb_loop
 		clc
 		adc #01
 		tax
-		lda [jpg_ypoint],z
+		lda jpg_yvalue
 		clc
 		adc jpg_cbtab1,x
 		sta jpg_temp+0
 		bcc :+
 		inc jpg_temp+1							; high byte
-:		lda [jpg_ypoint],z
+:		lda jpg_yvalue
 		sec
 		sbc jpg_cbtab2,x
 		bcs jpg_torgb_cont
@@ -2025,13 +2028,13 @@ jpg_torgb_loop
 
 jpg_torgb_poscb
 		tax
-		lda [jpg_ypoint],z
+		lda jpg_yvalue
 		sec
 		sbc jpg_cbtab1,x
 		sta jpg_temp+0
 		bcs :+
 		dec jpg_temp+1
-:		lda [jpg_ypoint],z
+:		lda jpg_yvalue
 		clc
 		adc jpg_cbtab2,x
 		bcc jpg_torgb_cont
@@ -2060,7 +2063,7 @@ jpg_torgb_cont
 		.byte $2c									; BIT $xxxx
 :		lda jpg_temp
 		sta [jpg_cbpoint],z							; green
-		lda [jpg_ypoint],z
+		lda jpg_yvalue
 		sec
 		sbc jpg_crtab1,x
 		bcs jpg_torgb_done
@@ -2083,7 +2086,7 @@ jpg_torgb_poscr
 		.byte $2c									; BIT $xxxx
 :		lda jpg_temp
 		sta [jpg_cbpoint],z
-		lda [jpg_ypoint],z
+		lda jpg_yvalue
 		clc
 		adc jpg_crtab1,x
 		bcc jpg_torgb_done
