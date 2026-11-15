@@ -160,15 +160,15 @@
 .define jpg_mult2lo				$10
 .define jpg_mult2hi				$14
 
-.define jpg_dct					$18
-.define jpg_f0					jpg_dct+0
-.define jpg_f1					jpg_dct+2
-.define jpg_f2					jpg_dct+4
-.define jpg_f3					jpg_dct+6
-.define jpg_f4					jpg_dct+8
-.define jpg_f5					jpg_dct+10
-.define jpg_f6					jpg_dct+12
-.define jpg_f7					jpg_dct+14
+.define jpg_dct					$16
+.define jpg_f0					jpg_dct+0												; $16
+.define jpg_f1					jpg_dct+2												; $18
+.define jpg_f2					jpg_dct+4												; $1a
+.define jpg_f3					jpg_dct+6												; $1c
+.define jpg_f4					jpg_dct+8												; $1e
+.define jpg_f5					jpg_dct+10												; $20
+.define jpg_f6					jpg_dct+12												; $22
+.define jpg_f7					jpg_dct+14												; $24
 
 .define jpg_index				$28														; idct stuff
 
@@ -186,18 +186,17 @@
 .define jpg_temp				$38														; 2 bytes
 .define jpg_yvalue				$3a														; cached luminance during RGB conversion
 
-
 .define jpg_coeff				$40														; 8 coefficients
-.define jpg_c0					jpg_coeff+0
-.define jpg_c1					jpg_coeff+2
-.define jpg_c2					jpg_coeff+4
-.define jpg_c3					jpg_coeff+6
-.define jpg_c4					jpg_coeff+8
-.define jpg_c5					jpg_coeff+10
-.define jpg_c6					jpg_coeff+12
-.define jpg_c7					jpg_coeff+14
+.define jpg_c0					jpg_coeff+0												; $40
+.define jpg_c1					jpg_coeff+2												; $42
+.define jpg_c2					jpg_coeff+4												; $44
+.define jpg_c3					jpg_coeff+6												; $46
+.define jpg_c4					jpg_coeff+8												; $48
+.define jpg_c5					jpg_coeff+10											; $4a
+.define jpg_c6					jpg_coeff+12											; $4c
+.define jpg_c7					jpg_coeff+14											; $4e
 
-.define jpg_initptr				$98														; 32-bit pointer for buffer initialization
+.define jpg_initptr				$98														; 32-bit pointer for buffer initialization. starts off being jpg_imgbuf_ptr
 .define jpg_outptr				$9c														; 32-bit desample destination pointer
 
 .define jpg_ypoint				$a0														; used in convert to rgb
@@ -314,6 +313,8 @@ jpg_rend						.byte 0
 ;jpg_currow						.byte 0
 jpg_curcol						.byte 0
 jpg_rendflag					.byte 0
+
+jpg_getbitsign					.byte 0
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1269,8 +1270,6 @@ jpg_gethuff_error
 
 ; retrieve .a bits and convert to signed number in (bitslo, bitshi)
 
-jpg_sign	.byte 0
-
 jpg_getbits
 
 		sta jpg_count
@@ -1283,7 +1282,7 @@ jpg_getbits
 :		sta jpg_bitshi
 		rol
 		sta jpg_bitslo
-		sta jpg_sign
+		sta jpg_getbitsign
 		dec jpg_count
 		beq jpggbsdone
 jpggbsloop
@@ -1293,7 +1292,7 @@ jpggbsloop
 		dec jpg_count
 		bne jpggbsloop
 jpggbsdone
-		lda jpg_sign
+		lda jpg_getbitsign
 		bpl jpggbsrts
 		inc jpg_bitslo								; make two's complement
 		bne jpggbsrts
@@ -1308,15 +1307,18 @@ jpg_getbits_zero
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpg_pmult											; exit .a = bitshi
+jpg_pmult											; at exit Accumulator = bitshi
+
 		bmi jpg_pmult_neg
-		beq :++
-:		inx											; shift count
+		beq jpg_pmult_zero
+jpg_pmult_pos
+		inx											; shift count
 		lsr
 		ror jpg_bitslo
 		cmp #00
-		bne :-
-:		sta jpg_bitshi
+		bne jpg_pmult_pos
+jpg_pmult_zero
+		sta jpg_bitshi
 		lda jpg_bitslo
 		asl
 		rol jpg_bitshi
@@ -1383,6 +1385,8 @@ jpg_pmult_neg
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
+jpg_idct
+
 ; compute the inverse dct (1d)
 ; uses modified reversed flowgraph from pennebaker & mitchell, p. 52
 ;
@@ -1394,14 +1398,15 @@ jpg_pmult_neg
 	{
 		double t1, t2, t3, t4;
 
-		// Stage 1
+		// massage before tranformation
 
-		for (int i=0; i<8; i++)
+		F[0] = F[0]*2 / Math.sqrt(2.0); // 
+		for (int i=1; i<8; i++)
 		{
 			F[i] = S[i] / (2.0 * Math.cos(i * ang/2));
 		}
 
-		F[0] = F[0]*2 / Math.sqrt(2.0);
+		// Stage 1
 
 		t1   =  F[5] - F[3];
 		t2   =  F[1] + F[7];
@@ -1469,7 +1474,6 @@ jpg_pmult_neg
 	}
 */
 
-jpg_idct
 		; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
 		;
 		; specifically,
@@ -1488,8 +1492,7 @@ jpg_idct
 			lda f+0
 			sta jpg_bitslo
 			lda f+1
-			jsr jpg_pmult
-			
+			jsr jpg_pmult							; does a bmi straight away
 			sta f+1
 			lda jpg_bitslo
 			sta f+0
@@ -1938,9 +1941,7 @@ jpg_idct
 
 jpg_idct2d
 
-jpg_idct2d_cols										; first the columns
-
-		ldx #00
+		ldx #00										; first the columns
 ji2dcloop		
 		stx jpg_index
 		ldy #00
@@ -2045,6 +2046,7 @@ ji2drcont
 ;
 
 jpg_torgb
+
 		ldq jpg_ybuf_ptr
 		stq jpg_ypoint
 		ldq jpg_cbbuf_ptr
@@ -2263,6 +2265,7 @@ jpg_nodesample
 ; result -> trans
 
 jpg_dequantize
+
 		ldx jpg_curcomp
 		lda jpg_cquant,x
 		asl
@@ -2322,6 +2325,7 @@ jpg_dequantize_high
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
 jpg_fetch											; fetch the data
+
 		lda #00
 		sta jpg_dest+1
 		lda jpg_curcol
@@ -2339,6 +2343,7 @@ jpg_fetch											; fetch the data
 		lda jpg_curbuf+1
 		adc jpg_dest+1
 		sta jpg_dest+1
+
 		lda jpg_dest+0
 		sta jpg_outptr+0
 		lda jpg_dest+1
@@ -2379,6 +2384,7 @@ decode_error
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
 jpg_readdataunit
+
 		sta jpg_curbuf+0
 		sty jpg_curbuf+1
 		lda #<.hiword(jpg_imgbuf)

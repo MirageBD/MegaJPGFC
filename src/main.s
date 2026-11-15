@@ -191,6 +191,10 @@ irq1
 		bra continueirq
 
 set_jpg_load_irq
+		lda #$ff						; clear keyboard so image viewer doesn't return immediately when releasing return
+		sta keyboard_pressed
+		lda palntscscreenstart
+		sta $d012
 		lda #<jpg_load_irq
 		sta $fffe
 		lda #>jpg_load_irq

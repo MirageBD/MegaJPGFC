@@ -112,7 +112,6 @@ jpg_fillsetaltpalbits
 		cmp #25
 		bne jpg_fillsetaltpalbits
 
-
 		; fill full colour char pattern ($f000)
 
 		lda #<jpgchars
@@ -349,34 +348,16 @@ jpg_load_irq
 		phy
 		phz
 
-;		ldx #$00
-;:		inc $d020
-;		inx
-;		bne :-
-
-		jsr mouse_update
-		jsr keyboard_update
-
 		lda main_event
 		cmp #$02
-		beq set_jpg_render_irq
+		bne jpg_not_ready_yet
 
-		lda palntscscreenstart
-		sta $d012
-
-		plz
-		ply
-		plx
-		pla
-		plp
-		asl $d019
-		rti
-
-set_jpg_render_irq
 		lda #<jpg_render_irq
 		sta $fffe
 		lda #>jpg_render_irq
 		sta $ffff
+
+jpg_not_ready_yet
 		plz
 		ply
 		plx
