@@ -121,7 +121,6 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_huff			$34							; huffman pointers, 2 bytes
 .define jpg_quantp			$36							; quant table, 2 bytes
 .define jpg_temp			$38							; 2 bytes
-.define jpg_grayvalue		$3a							; grayscale byte while copying to chroma planes
 
 
 .define jpg_coeff			$40							; 8 coefficients
@@ -1987,10 +1986,7 @@ jpg_torgb
 		ldx #>(jpg_cbbuf-jpg_ybuf)
 		ldz #$00
 :		lda [jpg_ypoint],z
-		sta jpg_grayvalue
-		lda jpg_grayvalue
 		sta [jpg_cbpoint],z
-		lda jpg_grayvalue
 		sta [jpg_crpoint],z
 		inz
 		iny
@@ -2014,17 +2010,13 @@ jpg_torgb_loop
 		clc
 		adc #01
 		tax
-		tya
-		taz
 		lda [jpg_ypoint],z
 		clc
 		adc jpg_cbtab1,x
 		sta jpg_temp+0
 		bcc :+
-		inc jpg_temp+1								; high byte
-:		tya
-		taz
-		lda [jpg_ypoint],z
+		inc jpg_temp+1							; high byte
+:		lda [jpg_ypoint],z
 		sec
 		sbc jpg_cbtab2,x
 		bcs jpg_torgb_cont
@@ -2033,17 +2025,13 @@ jpg_torgb_loop
 
 jpg_torgb_poscb
 		tax
-		tya
-		taz
 		lda [jpg_ypoint],z
 		sec
 		sbc jpg_cbtab1,x
 		sta jpg_temp+0
 		bcs :+
 		dec jpg_temp+1
-:		tya
-		taz
-		lda [jpg_ypoint],z
+:		lda [jpg_ypoint],z
 		clc
 		adc jpg_cbtab2,x
 		bcc jpg_torgb_cont
@@ -2051,8 +2039,6 @@ jpg_torgb_poscb
 jpg_torgb_cont
 		sta jpg_temp2
 
-		tya
-		taz
 		lda [jpg_crpoint],z
 		eor #$80
 		bpl jpg_torgb_poscr
@@ -2073,13 +2059,7 @@ jpg_torgb_cont
 :		lda #255
 		.byte $2c									; BIT $xxxx
 :		lda jpg_temp
-		pha
-		tya
-		taz
-		pla
 		sta [jpg_cbpoint],z							; green
-		tya
-		taz
 		lda [jpg_ypoint],z
 		sec
 		sbc jpg_crtab1,x
@@ -2102,13 +2082,7 @@ jpg_torgb_poscr
 :		lda #255
 		.byte $2c									; BIT $xxxx
 :		lda jpg_temp
-		pha
-		tya
-		taz
-		pla
 		sta [jpg_cbpoint],z
-		tya
-		taz
 		lda [jpg_ypoint],z
 		clc
 		adc jpg_crtab1,x
@@ -2116,16 +2090,8 @@ jpg_torgb_poscr
 		lda #255
 
 jpg_torgb_done
-		pha
-		tya
-		taz
-		pla
 		sta [jpg_ypoint],z							; red
 		lda jpg_temp2
-		pha
-		tya
-		taz
-		pla
 		sta [jpg_crpoint],z							; blue
 		iny
 		beq :++
