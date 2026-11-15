@@ -1969,7 +1969,6 @@ jpg_torgb
 		ldq jpg_crbuf_ptr
 		stq jpg_crpoint
 
-		ldy #00
 		ldx jpg_ncomps
 		dex
 		beq jpg_torgb_gray						; if grayscale, copy Y to Cb and Cr
@@ -1982,7 +1981,6 @@ jpg_torgb_gray
 		sta [jpg_cbpoint],z
 		sta [jpg_crpoint],z
 		inz
-		iny
 		bne :-
 		inc jpg_ypoint+1
 		inc jpg_cbpoint+1
@@ -2046,13 +2044,13 @@ jpg_torgb_cont
 		lda jpg_temp+1
 		adc #00
 		beq :++
-		bpl :+
-		lda #00
-		.byte $2c									; BIT $xxxx
-:		lda #255
-		.byte $2c									; BIT $xxxx
+		bmi :+
+		lda #255
+		bra :+++
+:		lda #00
+		bra :++
 :		lda jpg_temp
-		sta [jpg_cbpoint],z							; green
+:		sta [jpg_cbpoint],z							; green
 		lda jpg_yvalue
 		sec
 		sbc jpg_crtab1,x
@@ -2069,13 +2067,13 @@ jpg_torgb_poscr
 		lda jpg_temp+1
 		sbc #00
 		beq :++
-		bpl :+
-		lda #00
-		.byte $2c									; BIT $xxxx
-:		lda #255
-		.byte $2c									; BIT $xxxx
+		bmi :+
+		lda #255
+		bra :+++
+:		lda #00
+		bra :++
 :		lda jpg_temp
-		sta [jpg_cbpoint],z
+:		sta [jpg_cbpoint],z
 		lda jpg_yvalue
 		clc
 		adc jpg_crtab1,x
