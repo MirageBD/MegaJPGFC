@@ -24,39 +24,42 @@ jpg_reslen				.word 0							; lame restart markers
 ; F = {  0,    0,    0,     0, 0,      0,     0,   256 }
 ; S = {  0,    0,    0,     0, 0,      0,     0,   256 }
 
-.define jpg_negmlo			$0400						; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
-.define jpg_posmlo			$0500						; 2 pages
-.define jpg_negmhi			$0700
-.define jpg_posmhi			$0800						; 2 pages
+.define data1				$0400						; DATA0A00.BIN
+.define data2				$0a00						; DATA4000.BIN
 
-.define jpg_a1lo			$0a00						; $0000				; cos(2a), a=pi/8
-.define jpg_a1hi			$0b00						; $0100
+.define jpg_negmlo			data1+$0000					; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
+.define jpg_posmlo			data1+$0100					; 2 pages
+.define jpg_negmhi			data1+$0300
+.define jpg_posmhi			data1+$0400					; 2 pages
 
-.define jpg_a2lo			$0c00						; $0200				; cos(a) - cos(3a)
-.define jpg_a2hi			$0d00						; $0300
+.define jpg_a1lo			data2+$0000					; $0000				; cos(2a), a=pi/8
+.define jpg_a1hi			data2+$0100					; $0100
+
+.define jpg_a2lo			data2+$0200					; $0200				; cos(a) - cos(3a)
+.define jpg_a2hi			data2+$0300					; $0300
 
 .define jpg_a3lo			jpg_a1lo					; cos(2a)
 .define jpg_a3hi			jpg_a1hi
 
-.define jpg_a4lo			$0e00						; $0400				; cos(a) + cos(3a)
-.define jpg_a4hi			$0f00						; $0500
-.define jpg_a4gh			$1000						; $0600
+.define jpg_a4lo			data2+$0400					; $0400				; cos(a) + cos(3a)
+.define jpg_a4hi			data2+$0500					; $0500
+.define jpg_a4gh			data2+$0600					; $0600
 
-.define jpg_a5lo			$1100						; $0700				; cos(3a)
-.define jpg_a5hi			$1200						; $0800
+.define jpg_a5lo			data2+$0700					; $0700				; cos(3a)
+.define jpg_a5hi			data2+$0800					; $0800
 
 ; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
 ;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
 ;        with
 ;     f(0) = f(0) * 2 / sqrt(2) , which can be combined with the first step using the table for i=4.
 
-.define jpg_sec1			$1300						; $0900
-.define jpg_sec2			$1500
-.define jpg_sec3			$1700
-.define jpg_sec4			$1900
-.define jpg_sec5			$1b00
-.define jpg_sec6			$1d00
-.define jpg_sec7			$1f00						; ends $2100
+.define jpg_sec1			data2+$0900					; $0900
+.define jpg_sec2			data2+$0b00
+.define jpg_sec3			data2+$0d00
+.define jpg_sec4			data2+$0f00
+.define jpg_sec5			data2+$1100
+.define jpg_sec6			data2+$1300
+.define jpg_sec7			data2+$1500					; ends $2100
 
 .define jpg_crtab1			$8100						; rgb conversion
 .define jpg_crtab2			$8180
@@ -167,13 +170,13 @@ jpg_process
 		sta jpg_reslen+0
 		sta jpg_reslen+1
 
-		lda #>jpg_posmlo
+		lda #>(jpg_posmlo)
 		sta jpg_mult1lo+1
-		lda #>jpg_negmlo
+		lda #>(jpg_negmlo)
 		sta jpg_mult2lo+1
-		lda #>jpg_posmhi
+		lda #>(jpg_posmhi)
 		sta jpg_mult1hi+1
-		lda #>jpg_negmhi
+		lda #>(jpg_negmhi)
 		sta jpg_mult2hi+1
 
 		jsr sdc_getbyte								; check jpeg soi
@@ -1223,9 +1226,9 @@ jpg_prepdat
 
 		.macro PREPDAT sec, f
 			ldx #00
-			lda #<sec
+			lda #<(sec)
 			sta jpg_point+0
-			lda #>sec
+			lda #>(sec)
 			sta jpg_point+1
 			lda f+0
 			sta jpg_bitslo
