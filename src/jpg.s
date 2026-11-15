@@ -1,26 +1,18 @@
 
-; https://web.archive.org/web/20120403212223/http://class.ee.iastate.edu/ee528/Reading%20material/JPEG_File_Format.pdf
-
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-; ang = PI/8;
-; a1 = cos(2 * ang)					= cos(0.250 * PI)					= 0.7071067811865 * 65536			= 46340.95001184158
-; a2 = cos(    ang) - cos(3 * ang)	= cos(0.125 * PI) - cos(0.375 * PI)	= 0.5411961001462 * 65536			= 35467.82761918116
-; a3 = cos(2 * ang)					= cos(0.250 * PI)					= 0.7071067811865 * 65536			= 46340.95001184158
-; a4 = cos(    ang) + cos(3 * ang)	= cos(0.125 * PI) + cos(0.375 * PI)	= 1.3065629648763 * 65536 - 65536	= 20090.91046613821
-; a5 = cos(3 * ang)					= cos(0.375 * PI)					= 0.3826834323650 * 65536			= 25079.54142347852
-
-.define jpg_cos2ang				46341
-.define jpg_cosangminuscos3ang	35468
-.define jpg_cosangpluscos3ang	20091
-.define jpg_cos3ang				25080
+											; ang = PI/8;
+.define jpg_cos2ang				46341		; a1 = cos(2 * ang)					= cos(0.250 * PI)					= 0.7071067811865 * 65536			= 46340.95001184158
+.define jpg_cosangminuscos3ang	35468		; a2 = cos(    ang) - cos(3 * ang)	= cos(0.125 * PI) - cos(0.375 * PI)	= 0.5411961001462 * 65536			= 35467.82761918116
+.define jpg_cosangpluscos3ang	20091		; a4 = cos(    ang) + cos(3 * ang)	= cos(0.125 * PI) + cos(0.375 * PI)	= 1.3065629648763 * 65536 - 65536	= 20090.91046613821
+.define jpg_cos3ang				25080		; a5 = cos(3 * ang)					= cos(0.375 * PI)					= 0.3826834323650 * 65536			= 25079.54142347852
 
 								; f = { 10,   9.24, 7.07, 3.826,   0,   -3.826, -7.07, -9.24 }
 								; F = {  0,      0,    0,     0,   0,        0,     0,   256 }
 								; S = {  0,      0,    0,     0,   0,        0,     0,   256 }
 
-.define data1					$0400													; DATA1.BIN
-.define data2					$0a00													; DATA2.BIN
+.define data1					$0400		; DATA1.BIN, $0600 bytes
+.define data2					$0a00		; DATA2.BIN, $1700 bytes
 
 								; data1.bin contains square lookup tables used to multiply a coefficient byte by a JPEG quantization value using the difference of squares:
 								; F(a+q) - F(a-q) = aq, F(x) = [x^2/4]
@@ -59,25 +51,21 @@
 .define jpg_a5lo				data2+$0700												; cos(3a)
 .define jpg_a5hi				data2+$0800
 
-								; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
-								;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
-								;        with
-								;     f(0) = f(0) * 2 / sqrt(2) , which can be combined with the first step using the table for i=4.
-
 .define jpg_sec1				data2+$0900												; $0900
 .define jpg_sec2				data2+$0b00
 .define jpg_sec3				data2+$0d00
 .define jpg_sec4				data2+$0f00
 .define jpg_sec5				data2+$1100
 .define jpg_sec6				data2+$1300
-.define jpg_sec7				data2+$1500												; ends $2100
+.define jpg_sec7				data2+$1500												; $0a00+$1500+$0200 = ends $2100
 
-; YCbCc to RGB tables, $0200 bytes ---------------------------------------------------------------------------------------------------------------------
+; YCbCr to RGB tables, $0200 bytes ---------------------------------------------------------------------------------------------------------------------
 
-.define jpg_crtab1				$8100													; YCBCC2RGB (YCbCc to RGB) table used for rgb conversion
-.define jpg_crtab2				$8180
-.define jpg_cbtab1				$8200
-.define jpg_cbtab2				$8280
+.define jpg_cbcrtabs			$8100													; YCbCr2RGB (YCbCr to RGB) table used for rgb conversion
+.define jpg_cbtab1				jpg_cbcrtabs+$0000
+.define jpg_cbtab2				jpg_cbcrtabs+$0080
+.define jpg_crtab1				jpg_cbcrtabs+$0100
+.define jpg_crtab2				jpg_cbcrtabs+$0180
 
 ; defines ---------------------------------------------------------------------------------------------------------------------
 
@@ -224,16 +212,15 @@ jpg_zigzag						.byte   0,   2,   16,  32,  18,   4,   6,  20			; table to un-zi
 								; 58 59 52 45 38 31 39 46
 								; 53 60 61 54 47 55 62 63
 
-								; R = Y + 1.402    * (Cr-128)
-								; G = Y - 0.344136 * (Cb-128) - 0.714136 * (Cr-128)
-								; B = Y + 1.772    * (Cb-128)
-
-jpg_1402						.dword $000166E9	; 1.402	   * 65536 = 91,881.472		= $000166E9		; YCbCc to RGB conversion. See defines for explanation of these numbers
-jpg_0714136						.dword $0000B6D2	; 0.714136 * 65536 = 46,801.616896	= $0000B6D2
-jpg_0344136						.dword $00005819	; 0.344136 * 65536 = 22,553.296896	= $00005819
-jpg_1772						.dword $0001C5A2	; 1.772    * 65536 = 116,129.792	= $0001C5A2
+jpg_1402						.dword $000166E9	; 1.402	   * 65536 = 91,881.472		= $000166E9		; YCbCr to RGB conversion
+jpg_0714136						.dword $0000B6D2	; 0.714136 * 65536 = 46,801.616896	= $0000B6D2		; R = Y + 1.402    * (Cr-128)
+jpg_0344136						.dword $00005819	; 0.344136 * 65536 = 22,553.296896	= $00005819		; G = Y - 0.344136 * (Cb-128) - 0.714136 * (Cr-128)
+jpg_1772						.dword $0001C5A2	; 1.772    * 65536 = 116,129.792	= $0001C5A2		; B = Y + 1.772    * (Cb-128)
 
 jpg_curbuf						.byte 0, 0, 0, 0
+
+jpg_dchuff0						.word 0, 0, 0, 0										; addresses
+jpg_achuff0						.word 0, 0, 0, 0
 
 jpg_quanttab					.word jpg_qt0
 								.word jpg_qt1
@@ -258,15 +245,6 @@ jpg_cres						.word 0
 
 jpg_col							.byte 0
 jpg_coloff						.byte 0													; col offset
-
-jpg_dchuff0						.word 0													; addresses
-jpg_dchuff1						.word 0
-jpg_dchuff2						.word 0
-jpg_dchuff3						.word 0
-jpg_achuff0						.word 0
-jpg_achuff1						.word 0
-jpg_achuff2						.word 0
-jpg_achuff3						.word 0
 
 jpg_hufftop						.word 0													; end of huffman tree
 jpg_hufftx						.byte 0
@@ -761,7 +739,7 @@ dhtcont
 
 dht_ok		
 		lda jpg_hufftop+0
-		sta jpg_dchuff0,x
+		sta jpg_dchuff0+0,x
 		sta jpg_huff+0
 		lda jpg_hufftop+1
 		sta jpg_dchuff0+1,x
@@ -805,7 +783,7 @@ dhtloop	inc jpg_huffbits+1							; hi,lo!
 		bne :-
 
 :		ldx jpg_temp2
-		lda jpg_dchuff0,x
+		lda jpg_dchuff0+0,x
 		sta jpg_huff+0
 		lda jpg_dchuff0+1,x
 		sta jpg_huff+1
@@ -1150,7 +1128,7 @@ jpg_decodedc
 		lda jpg_dchuff,x
 		asl
 		tax
-		lda jpg_dchuff0,x
+		lda jpg_dchuff0+0,x
 		sta jpg_huff+0
 		lda jpg_dchuff0+1,x
 		sta jpg_huff+1
@@ -1516,6 +1494,7 @@ jpg_idct
 		.endmacro
 
 		PREPDAT jpg_sec4, jpg_f0
+
 		PREPDAT jpg_sec1, jpg_f1
 		PREPDAT jpg_sec2, jpg_f2
 		PREPDAT jpg_sec3, jpg_f3
@@ -2030,8 +2009,7 @@ ji2drloop
 		sta jpg_bitshi
 		lda jpg_bitslo
 		adc #128									; c determines rounding
-		; sta (dest),y
-		sta jpg_trans,y
+		sta jpg_trans+0,y
 		lda jpg_bitshi								; range check
 		adc #00
 		beq ji2drcont
@@ -2040,8 +2018,7 @@ ji2drloop
 		.byte $2c									; BIT $xxxx
 ji2drpos
 		lda #$ff
-		; sta (dest),y
-		sta jpg_trans,y
+		sta jpg_trans+0,y
 ji2drcont		
 		; inc dest
 		iny
@@ -2081,7 +2058,7 @@ jpg_torgb_loop
 		lda [jpg_cbpoint],z
 		eor #$80
 		bpl jpg_torgb_poscb
-		eor #$ff ; negcb
+		eor #$ff									; negcb
 		clc
 		adc #01
 		tax
@@ -2090,7 +2067,7 @@ jpg_torgb_loop
 		adc jpg_cbtab1,x
 		sta jpg_temp+0
 		bcc :+
-		inc jpg_temp+1							; high byte
+		inc jpg_temp+1								; high byte
 :		lda jpg_yvalue
 		sec
 		sbc jpg_cbtab2,x
@@ -2134,7 +2111,7 @@ jpg_torgb_cont
 :		lda #00
 		bra :++
 :		lda jpg_temp
-:		sta [jpg_cbpoint],z							; green
+:		sta [jpg_cbpoint],z							; green 1
 		lda jpg_yvalue
 		sec
 		sbc jpg_crtab1,x
@@ -2157,7 +2134,7 @@ jpg_torgb_poscr
 :		lda #00
 		bra :++
 :		lda jpg_temp
-:		sta [jpg_cbpoint],z
+:		sta [jpg_cbpoint],z							; green 2
 		lda jpg_yvalue
 		clc
 		adc jpg_crtab1,x
@@ -2166,7 +2143,7 @@ jpg_torgb_poscr
 
 jpg_torgb_done
 		sta [jpg_ypoint],z							; red
-		lda jpg_temp2
+		lda jpg_temp2	
 		sta [jpg_crpoint],z							; blue
 		inz
 		beq :++
@@ -2200,7 +2177,7 @@ jpg_desample_oldrow
 		
 		ldy #00
 :		ldx jpg_temp2
-		lda jpg_trans,x
+		lda jpg_trans+0,x
 		ldx jpg_hsamp
 
 jpg_desample_expand
@@ -2253,7 +2230,7 @@ jpg_nodesample
 		ldx #0
 
 :		ldy #0
-:		lda jpg_trans,x
+:		lda jpg_trans+0,x
 		sta (jpg_dest),y
 		iny
 		inx
@@ -2329,10 +2306,10 @@ jpg_dequantize_high
 
 		ldy jpg_zigzag,x							; un-zigzag
 		iny
-		sta jpg_trans,y
+		sta jpg_trans+0,y
 		dey
 		lda jpg_bitslo
-		sta jpg_trans,y
+		sta jpg_trans+0,y
 		dex
 
 		bpl jpg_dequantize_loop
@@ -2377,12 +2354,14 @@ jpg_fetch											; fetch the data
 		jsr jpg_decodeac
 		lda jpg_error
 		bne decode_error
-		lda jpg_rendflag							; are we rendering (i.e. are we right of the offset?)? (no point dequantizing, etc, if we aren't)
+		lda jpg_rendflag							; are we rendering (i.e. are we right of the offset)? (no point dequantizing, etc, if we aren't)
 		bne :++
 
+		inc $d020
 		jsr jpg_dequantize
-
 		jsr jpg_idct2d
+		lda #$00
+		sta $d020
 
 		lda jpg_curcomp
 		cmp #1
