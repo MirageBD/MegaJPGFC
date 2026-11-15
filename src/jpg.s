@@ -148,6 +148,13 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_headerr			5
 .define jpg_hufferr			6
 
+jpg_ybuf_ptr
+		.byte <.loword(jpg_ybuf), >.loword(jpg_ybuf), <.hiword(jpg_ybuf), >.hiword(jpg_ybuf)
+jpg_cbbuf_ptr
+		.byte <.loword(jpg_cbbuf), >.loword(jpg_cbbuf), <.hiword(jpg_cbbuf), >.hiword(jpg_cbbuf)
+jpg_crbuf_ptr
+		.byte <.loword(jpg_crbuf), >.loword(jpg_crbuf), <.hiword(jpg_crbuf), >.hiword(jpg_crbuf)
+
 jpg_process
 
 		lda #00
@@ -1955,30 +1962,12 @@ ji2drcont
 ;
 
 jpg_torgb
-		lda #<.loword(jpg_ybuf)
-		sta jpg_ypoint+0
-		lda #>.loword(jpg_ybuf)
-		sta jpg_ypoint+1
-		lda #<.hiword(jpg_ybuf)
-		sta jpg_ypoint+2
-		lda #>.hiword(jpg_ybuf)
-		sta jpg_ypoint+3
-		lda #<.loword(jpg_cbbuf)
-		sta jpg_cbpoint+0
-		lda #>.loword(jpg_cbbuf)
-		sta jpg_cbpoint+1
-		lda #<.hiword(jpg_cbbuf)
-		sta jpg_cbpoint+2
-		lda #>.hiword(jpg_cbbuf)
-		sta jpg_cbpoint+3
-		lda #<.loword(jpg_crbuf)
-		sta jpg_crpoint+0
-		lda #>.loword(jpg_crbuf)
-		sta jpg_crpoint+1
-		lda #<.hiword(jpg_crbuf)
-		sta jpg_crpoint+2
-		lda #>.hiword(jpg_crbuf)
-		sta jpg_crpoint+3
+		ldq jpg_ybuf_ptr
+		stq jpg_ypoint
+		ldq jpg_cbbuf_ptr
+		stq jpg_cbpoint
+		ldq jpg_crbuf_ptr
+		stq jpg_crpoint
 
 		ldy #00
 		ldx jpg_ncomps
