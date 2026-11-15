@@ -35,11 +35,11 @@
 .segment "SPRITEPAL"
 		.incbin "../bin/cursor_pal1.bin"
 
-.segment "DATA0A00"
-		.incbin "../bin/data0a00.bin"
+.segment "DATA1"
+		.incbin "../bin/data1.bin"
 
-.segment "DATA4000"
-		.incbin "../bin/data4000.bin"
+.segment "DATA2"
+		.incbin "../bin/data2.bin"
 
 .segment "YCBCC2RGB"
 		.incbin "../bin/ycbcc2rgb.bin"

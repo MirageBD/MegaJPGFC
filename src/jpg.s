@@ -24,8 +24,8 @@ jpg_reslen				.word 0							; lame restart markers
 ; F = {  0,    0,    0,     0, 0,      0,     0,   256 }
 ; S = {  0,    0,    0,     0, 0,      0,     0,   256 }
 
-.define data1				$0400						; DATA0A00.BIN
-.define data2				$0a00						; DATA4000.BIN
+.define data1				$0400						; DATA1.BIN
+.define data2				$0a00						; DATA2.BIN
 
 .define jpg_negmlo			data1+$0000					; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
 .define jpg_posmlo			data1+$0100					; 2 pages

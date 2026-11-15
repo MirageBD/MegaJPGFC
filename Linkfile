@@ -5,8 +5,8 @@ MEMORY
 
 SEGMENTS
 {
-	DATA0A00:		load=RAM, start=$0400;
-	DATA4000:		load=RAM, start=$0a00;
+	DATA1:			load=RAM, start=$0400;
+	DATA2:			load=RAM, start=$0a00;
 	MAIN:			load=RAM, start=$2100;
 	TEXT:			load=RAM, align=256;
 	YCBCC2RGB:		load=RAM, start=$8100;
