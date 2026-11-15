@@ -79,46 +79,6 @@
 .define jpg_cbtab1				$8200
 .define jpg_cbtab2				$8280
 
-; R = Y + 1.402    * (Cr-128)
-; G = Y - 0.344136 * (Cb-128) - 0.714136 * (Cr-128)
-; B = Y + 1.772    * (Cb-128)
-
-; 00 01 03 04 06 07 08 0A 0B 0D 0E 0F 11 12 14 15
-; 16 18 19 1B 1C 1D 1F 20 22 23 24 26 27 29 2A 2B
-; 2D 2E 30 31 32 34 35 37 38 39 3B 3C 3E 3F 40 42
-; 43 45 46 48 49 4A 4C 4D 4F 50 51 53 54 56 57 58
-; 5A 5B 5D 5E 5F 61 62 64 65 66 68 69 6B 6C 6D 6F
-; 70 72 73 74 76 77 79 7A 7B 7D 7E 80 81 82 84 85
-; 87 88 89 8B 8C 8E 8F 90 92 93 95 96 97 99 9A 9C
-; 9D 9E A0 A1 A3 A4 A5 A7 A8 AA AB AC AE AF B1 B2										; 1.402 * 128 = 179.456 = $B3 (close enough to $B2)
-
-; 00 01 01 02 03 04 04 05 06 06 07 08 09 09 0A 0B
-; 0B 0C 0D 0E 0E 0F 10 10 11 12 13 13 14 15 15 16
-; 17 18 18 19 1A 1A 1B 1C 1D 1D 1E 1F 1F 20 21 22
-; 22 23 24 24 25 26 27 27 28 29 29 2A 2B 2C 2C 2D
-; 2E 2E 2F 30 31 31 32 33 33 34 35 36 36 37 38 38
-; 39 3A 3B 3B 3C 3D 3D 3E 3F 40 40 41 42 42 43 44
-; 45 45 46 47 47 48 49 4A 4A 4B 4C 4C 4D 4E 4F 4F
-; 50 51 51 52 53 54 54 55 56 56 57 58 59 59 5A 5B										; 0.714136 * 128 = 91.409408 = $5B
-
-; 00 00 01 01 01 02 02 02 03 03 03 04 04 04 05 05
-; 06 06 06 07 07 07 08 08 08 09 09 09 0A 0A 0A 0B
-; 0B 0B 0C 0C 0C 0D 0D 0D 0E 0E 0E 0F 0F 0F 10 10
-; 11 11 11 12 12 12 13 13 13 14 14 14 15 15 15 16
-; 16 16 17 17 17 18 18 18 19 19 19 1A 1A 1A 1B 1B
-; 1C 1C 1C 1D 1D 1D 1E 1E 1E 1F 1F 1F 20 20 20 21
-; 21 21 22 22 22 23 23 23 24 24 24 25 25 26 26 26
-; 27 27 27 28 28 28 29 29 29 2A 2A 2A 2B 2B 2B 2C										; 0.344136 * 128 = 44.049408 = $2C
-
-; 00 02 04 05 07 09 0B 0C 0E 10 12 13 15 17 19 1B
-; 1C 1E 20 22 23 25 27 29 2B 2C 2E 30 32 33 35 37
-; 39 3A 3C 3E 40 42 43 45 47 49 4A 4C 4E 50 52 53
-; 55 57 59 5A 5C 5E 60 61 63 65 67 69 6A 6C 6E 70
-; 71 73 75 77 78 7A 7C 7E 80 81 83 85 87 88 8A 8C
-; 8E 90 91 93 95 97 98 9A 9C 9E 9F A1 A3 A5 A7 A8
-; AA AC AE AF B1 B3 B5 B7 B8 BA BC BE BF C1 C3 C5
-; C6 C8 CA CC CE CF D1 D3 D5 D6 D8 DA DC DE DF E1										; 1.772 * 128 = 226.816 = 227 = $E3 (close enough to $E1)
-
 ; defines ---------------------------------------------------------------------------------------------------------------------
 
 .define jpg_trans				$8300													; transform
@@ -138,7 +98,6 @@
 .define jpg_channelbufsize		jpg_bufwidth*8*8*jpg_bufheight
 
 .define jpg_buflen				jpg_bufwidth*8*8
-
 
 .define jpg_imgbufsize			3*jpg_channelbufsize
 
@@ -265,6 +224,15 @@ jpg_zigzag						.byte   0,   2,   16,  32,  18,   4,   6,  20			; table to un-zi
 								; 58 59 52 45 38 31 39 46
 								; 53 60 61 54 47 55 62 63
 
+								; R = Y + 1.402    * (Cr-128)
+								; G = Y - 0.344136 * (Cb-128) - 0.714136 * (Cr-128)
+								; B = Y + 1.772    * (Cb-128)
+
+jpg_1402						.dword $000166E9	; 1.402	   * 65536 = 91,881.472		= $000166E9		; YCbCc to RGB conversion. See defines for explanation of these numbers
+jpg_0714136						.dword $0000B6D2	; 0.714136 * 65536 = 46,801.616896	= $0000B6D2
+jpg_0344136						.dword $00005819	; 0.344136 * 65536 = 22,553.296896	= $00005819
+jpg_1772						.dword $0001C5A2	; 1.772    * 65536 = 116,129.792	= $0001C5A2
+
 jpg_curbuf						.byte 0, 0, 0, 0
 
 jpg_quanttab					.word jpg_qt0
@@ -318,6 +286,53 @@ jpg_getbitsign					.byte 0
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
+jpg_init_global
+
+		lda #$00
+		sta MULTINB+1
+		sta MULTINB+2
+		sta MULTINB+3
+
+		ldq jpg_1402
+		stq MULTINA
+		ldx #$7f
+:		stx MULTINB+0
+		lda MULTOUT+2
+		sta jpg_crtab1,x
+		dex
+		bne :-
+
+		ldq jpg_0714136
+		stq MULTINA
+		ldx #$7f
+:		stx MULTINB+0
+		lda MULTOUT+2
+		sta jpg_crtab2,x
+		dex
+		bne :-
+
+		ldq jpg_0344136
+		stq MULTINA
+		ldx #$7f
+:		stx MULTINB+0
+		lda MULTOUT+2
+		sta jpg_cbtab1,x
+		dex
+		bne :-
+
+		ldq jpg_1772
+		stq MULTINA
+		ldx #$7f
+:		stx MULTINB+0
+		lda MULTOUT+2
+		sta jpg_cbtab2,x
+		dex
+		bne :-
+
+		rts
+
+; ----------------------------------------------------------------------------------------------------------------------------------------
+
 jpg_process
 
 		lda #00
@@ -352,6 +367,8 @@ jpg_process
 		sta jpg_hufftop+1
 		
 		jsr jpg_initbuff
+
+		jsr jpg_init_global
 
 		;UICORE_CALLELEMENTFUNCTION la1listbox, uilistbox_startaddentries
 		;UICORE_SETLISTBOXTEXT la1listbox, uitxt_jpgstart

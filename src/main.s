@@ -41,9 +41,6 @@
 .segment "DATA2"
 		.incbin "../bin/data2.bin"
 
-.segment "YCBCC2RGB"
-		.incbin "../bin/ycbcc2rgb.bin"
-
 .segment "MAIN"
 
 entry_main
