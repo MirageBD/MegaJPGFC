@@ -11,152 +11,188 @@ jpg_reslen				.word 0							; lame restart markers
 ; a1 = cos(2 * ang)					= cos(0.250 * PI)					= 0.7071067811865 * 65536			= 46340.95001184158
 ; a2 = cos(    ang) - cos(3 * ang)	= cos(0.125 * PI) - cos(0.375 * PI)	= 0.5411961001462 * 65536			= 35467.82761918116
 ; a3 = cos(2 * ang)					= cos(0.250 * PI)					= 0.7071067811865 * 65536			= 46340.95001184158
-; a4 = cos(    ang) + cos(3 * ang)	= cos(0.125 * PI) + cos(0.375 * PI)	= 1.3065629648763 * 65536 - 65536	= 20090.910466138215
-; a5 = cos(3 * ang)					= cos(0.375 * PI)					= 0.3826834323650 * 65536			= 25079.541423478528
+; a4 = cos(    ang) + cos(3 * ang)	= cos(0.125 * PI) + cos(0.375 * PI)	= 1.3065629648763 * 65536 - 65536	= 20090.91046613821
+; a5 = cos(3 * ang)					= cos(0.375 * PI)					= 0.3826834323650 * 65536			= 25079.54142347852
 
-.define jpg_a1216			46341
-.define jpg_a2216			35468
-.define jpg_a3216			jpg_a1216
-.define jpg_a4216			20091
-.define jpg_a5216			25080
+.define jpg_cos2ang				46341
+.define jpg_cosangminuscos3ang	35468
+.define jpg_cosangpluscos3ang	20091
+.define jpg_cos3ang				25080
 
 ; f = { 10, 9.24, 7.07, 3.826, 0, -3.826, -7.07, -9.24 }
 ; F = {  0,    0,    0,     0, 0,      0,     0,   256 }
 ; S = {  0,    0,    0,     0, 0,      0,     0,   256 }
 
-.define data1				$0400						; DATA1.BIN
-.define data2				$0a00						; DATA2.BIN
+.define data1					$0400						; DATA1.BIN
+.define data2					$0a00						; DATA2.BIN
 
-.define jpg_negmlo			data1+$0000					; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
-.define jpg_posmlo			data1+$0100					; 2 pages
-.define jpg_negmhi			data1+$0300
-.define jpg_posmhi			data1+$0400					; 2 pages
+.define jpg_negmlo				data1+$0000					; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
+.define jpg_posmlo				data1+$0100					; 2 pages
+.define jpg_negmhi				data1+$0300
+.define jpg_posmhi				data1+$0400					; 2 pages
 
-.define jpg_a1lo			data2+$0000					; $0000				; cos(2a), a=pi/8
-.define jpg_a1hi			data2+$0100					; $0100
+.define jpg_a1lo				data2+$0000					; $0000				; cos(2a), a=pi/8
+.define jpg_a1hi				data2+$0100					; $0100
 
-.define jpg_a2lo			data2+$0200					; $0200				; cos(a) - cos(3a)
-.define jpg_a2hi			data2+$0300					; $0300
+.define jpg_a2lo				data2+$0200					; $0200				; cos(a) - cos(3a)
+.define jpg_a2hi				data2+$0300					; $0300
 
-.define jpg_a3lo			jpg_a1lo					; cos(2a)
-.define jpg_a3hi			jpg_a1hi
+.define jpg_a3lo				jpg_a1lo					; cos(2a)
+.define jpg_a3hi				jpg_a1hi
 
-.define jpg_a4lo			data2+$0400					; $0400				; cos(a) + cos(3a)
-.define jpg_a4hi			data2+$0500					; $0500
-.define jpg_a4gh			data2+$0600					; $0600
+.define jpg_a4lo				data2+$0400					; $0400				; cos(a) + cos(3a)
+.define jpg_a4hi				data2+$0500					; $0500
+.define jpg_a4gh				data2+$0600					; $0600
 
-.define jpg_a5lo			data2+$0700					; $0700				; cos(3a)
-.define jpg_a5hi			data2+$0800					; $0800
+.define jpg_a5lo				data2+$0700					; $0700				; cos(3a)
+.define jpg_a5hi				data2+$0800					; $0800
 
 ; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
 ;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
 ;        with
 ;     f(0) = f(0) * 2 / sqrt(2) , which can be combined with the first step using the table for i=4.
 
-.define jpg_sec1			data2+$0900					; $0900
-.define jpg_sec2			data2+$0b00
-.define jpg_sec3			data2+$0d00
-.define jpg_sec4			data2+$0f00
-.define jpg_sec5			data2+$1100
-.define jpg_sec6			data2+$1300
-.define jpg_sec7			data2+$1500					; ends $2100
+.define jpg_sec1				data2+$0900					; $0900
+.define jpg_sec2				data2+$0b00
+.define jpg_sec3				data2+$0d00
+.define jpg_sec4				data2+$0f00
+.define jpg_sec5				data2+$1100
+.define jpg_sec6				data2+$1300
+.define jpg_sec7				data2+$1500					; ends $2100
 
-.define jpg_crtab1			$8100						; rgb conversion
-.define jpg_crtab2			$8180
-.define jpg_cbtab1			$8200
-.define jpg_cbtab2			$8280
+.define jpg_crtab1				$8100						; YCBCC2RGB (YCbCc to RGB) table used for rgb conversion
+.define jpg_crtab2				$8180
+.define jpg_cbtab1				$8200
+.define jpg_cbtab2				$8280
 
-.define jpg_trans			$8300						; transform
+; R = Y + 1.402    * (Cr-128)
+; G = Y - 0.344136 * (Cb-128) - 0.714136 * (Cr-128)
+; B = Y + 1.772    * (Cb-128)
 
-.define jpg_veclo			$8380						; vec to be quantized
-.define jpg_vechi			$83c0
+; 00 01 03 04 06 07 08 0A 0B 0D 0E 0F 11 12 14 15
+; 16 18 19 1B 1C 1D 1F 20 22 23 24 26 27 29 2A 2B
+; 2D 2E 30 31 32 34 35 37 38 39 3B 3C 3E 3F 40 42
+; 43 45 46 48 49 4A 4C 4D 4F 50 51 53 54 56 57 58
+; 5A 5B 5D 5E 5F 61 62 64 65 66 68 69 6B 6C 6D 6F
+; 70 72 73 74 76 77 79 7A 7B 7D 7E 80 81 82 84 85
+; 87 88 89 8B 8C 8E 8F 90 92 93 95 96 97 99 9A 9C
+; 9D 9E A0 A1 A3 A4 A5 A7 A8 AA AB AC AE AF B1 B2			; 1.402 * 128 = 179.456 = $B3 (close enough to $B2)
 
-.define jpg_imgbuf			$58000						; 3 x 5,120-byte planes ($50000-$53bff)
+; 00 01 01 02 03 04 04 05 06 06 07 08 09 09 0A 0B
+; 0B 0C 0D 0E 0E 0F 10 10 11 12 13 13 14 15 15 16
+; 17 18 18 19 1A 1A 1B 1C 1D 1D 1E 1F 1F 20 21 22
+; 22 23 24 24 25 26 27 27 28 29 29 2A 2B 2C 2C 2D
+; 2E 2E 2F 30 31 31 32 33 33 34 35 36 36 37 38 38
+; 39 3A 3B 3B 3C 3D 3D 3E 3F 40 40 41 42 42 43 44
+; 45 45 46 47 47 48 49 4A 4A 4B 4C 4C 4D 4E 4F 4F
+; 50 51 51 52 53 54 54 55 56 56 57 58 59 59 5A 5B			; 0.714136 * 128 = 91.409408 = $5B
 
-.define jpg_huffmem			$c000						; huffman trees ($c000-$c570)
+; 00 00 01 01 01 02 02 02 03 03 03 04 04 04 05 05
+; 06 06 06 07 07 07 08 08 08 09 09 09 0A 0A 0A 0B
+; 0B 0B 0C 0C 0C 0D 0D 0D 0E 0E 0E 0F 0F 0F 10 10
+; 11 11 11 12 12 12 13 13 13 14 14 14 15 15 15 16
+; 16 16 17 17 17 18 18 18 19 19 19 1A 1A 1A 1B 1B
+; 1C 1C 1C 1D 1D 1D 1E 1E 1E 1F 1F 1F 20 20 20 21
+; 21 21 22 22 22 23 23 23 24 24 24 25 25 26 26 26
+; 27 27 27 28 28 28 29 29 29 2A 2A 2A 2B 2B 2B 2C			; 0.344136 * 128 = 44.049408 = $2C
 
-.define jpg_bufwidth		40							; was 40
-.define jpg_bufheight		2
+; 00 02 04 05 07 09 0B 0C 0E 10 12 13 15 17 19 1B
+; 1C 1E 20 22 23 25 27 29 2B 2C 2E 30 32 33 35 37
+; 39 3A 3C 3E 40 42 43 45 47 49 4A 4C 4E 50 52 53
+; 55 57 59 5A 5C 5E 60 61 63 65 67 69 6A 6C 6E 70
+; 71 73 75 77 78 7A 7C 7E 80 81 83 85 87 88 8A 8C
+; 8E 90 91 93 95 97 98 9A 9C 9E 9F A1 A3 A5 A7 A8
+; AA AC AE AF B1 B3 B5 B7 B8 BA BC BE BF C1 C3 C5
+; C6 C8 CA CC CE CF D1 D3 D5 D6 D8 DA DC DE DF E1			; 1.772 * 128 = 226.816 = 227 = $E3 (close enough to $E1)
 
-.define jpg_channelbufsize	jpg_bufwidth*8*8*jpg_bufheight
+.define jpg_trans				$8300						; transform
 
-.define jpg_imgbufsize		3*jpg_channelbufsize
+.define jpg_veclo				$8380						; vec to be quantized
+.define jpg_vechi				$83c0
 
-.define jpg_ybuf			jpg_imgbuf+0*jpg_channelbufsize
-.define jpg_cbbuf			jpg_imgbuf+1*jpg_channelbufsize
-.define jpg_crbuf			jpg_imgbuf+2*jpg_channelbufsize
+.define jpg_imgbuf				$58000						; 3 x 5,120-byte planes ($50000-$53bff)
 
-.define jpg_qt0				$0340						; quantization tables
-.define jpg_qt1				jpg_qt0+64					; $0380
-.define jpg_qt2				jpg_qt0+128					; $03c0 - only use 3
+.define jpg_huffmem				$c000						; huffman trees ($c000-$c570)
 
-.define jpg_point			$02
-.define jpg_dest			$04
-.define jpg_bitslo			$06							; and dequantize
-.define jpg_bitshi			$07
+.define jpg_bufwidth			40							; was 40
+.define jpg_bufheight			2
 
-.define jpg_mult1lo			$08							; multiplication tables
-.define jpg_mult1hi			$0c
-.define jpg_mult2lo			$10
-.define jpg_mult2hi			$14
+.define jpg_channelbufsize		jpg_bufwidth*8*8*jpg_bufheight
 
-.define jpg_dct				$18
-.define jpg_f0				jpg_dct+0
-.define jpg_f1				jpg_dct+2
-.define jpg_f2				jpg_dct+4
-.define jpg_f3				jpg_dct+6
-.define jpg_f4				jpg_dct+8
-.define jpg_f5				jpg_dct+10
-.define jpg_f6				jpg_dct+12
-.define jpg_f7				jpg_dct+14
+.define jpg_imgbufsize			3*jpg_channelbufsize
 
-.define jpg_index			$28							; idct stuff
+.define jpg_ybuf				jpg_imgbuf+0*jpg_channelbufsize
+.define jpg_cbbuf				jpg_imgbuf+1*jpg_channelbufsize
+.define jpg_crbuf				jpg_imgbuf+2*jpg_channelbufsize
 
-.define jpg_t1				$2a
-.define jpg_t2				$2c
-.define jpg_t3				$2e
+.define jpg_qt0					$0340						; quantization tables
+.define jpg_qt1					jpg_qt0+64					; $0380
+.define jpg_qt2					jpg_qt0+128					; $03c0 - only use 3
 
-.define jpg_vsamp			$30							; desample, 1 byte
-.define jpg_hsamp			$31							; 1 byte
+.define jpg_point				$02
+.define jpg_dest				$04
+.define jpg_bitslo				$06							; and dequantize
+.define jpg_bitshi				$07
 
-.define jpg_count			$32							; used by getbits, addnode and decodeac, 1 byte
-.define jpg_temp2			$33							; used for huffman nodes, 1 byte
-.define jpg_huff			$34							; huffman pointers, 2 bytes
-.define jpg_quantp			$36							; quant table, 2 bytes
-.define jpg_temp			$38							; 2 bytes
-.define jpg_yvalue			$3a							; cached luminance during RGB conversion
+.define jpg_mult1lo				$08							; multiplication tables
+.define jpg_mult1hi				$0c
+.define jpg_mult2lo				$10
+.define jpg_mult2hi				$14
+
+.define jpg_dct					$18
+.define jpg_f0					jpg_dct+0
+.define jpg_f1					jpg_dct+2
+.define jpg_f2					jpg_dct+4
+.define jpg_f3					jpg_dct+6
+.define jpg_f4					jpg_dct+8
+.define jpg_f5					jpg_dct+10
+.define jpg_f6					jpg_dct+12
+.define jpg_f7					jpg_dct+14
+
+.define jpg_index				$28							; idct stuff
+
+.define jpg_t1					$2a
+.define jpg_t2					$2c
+.define jpg_t3					$2e
+
+.define jpg_vsamp				$30							; desample, 1 byte
+.define jpg_hsamp				$31							; 1 byte
+
+.define jpg_count				$32							; used by getbits, addnode and decodeac, 1 byte
+.define jpg_temp2				$33							; used for huffman nodes, 1 byte
+.define jpg_huff				$34							; huffman pointers, 2 bytes
+.define jpg_quantp				$36							; quant table, 2 bytes
+.define jpg_temp				$38							; 2 bytes
+.define jpg_yvalue				$3a							; cached luminance during RGB conversion
 
 
-.define jpg_coeff			$40							; 8 coefficients
-.define jpg_c0				jpg_coeff+0					; check usage?
-.define jpg_c1				jpg_coeff+2					; check usage?
-.define jpg_c2				jpg_coeff+4					; check usage?
-.define jpg_c3				jpg_coeff+6					; check usage?
-.define jpg_c4				jpg_coeff+8					; check usage?
-.define jpg_c5				jpg_coeff+10				; check usage?
-.define jpg_c6				jpg_coeff+12				; check usage?
-.define jpg_c7				jpg_coeff+14				; check usage?
+.define jpg_coeff				$40							; 8 coefficients
+.define jpg_c0					jpg_coeff+0					; check usage?
+.define jpg_c1					jpg_coeff+2					; check usage?
+.define jpg_c2					jpg_coeff+4					; check usage?
+.define jpg_c3					jpg_coeff+6					; check usage?
+.define jpg_c4					jpg_coeff+8					; check usage?
+.define jpg_c5					jpg_coeff+10				; check usage?
+.define jpg_c6					jpg_coeff+12				; check usage?
+.define jpg_c7					jpg_coeff+14				; check usage?
 
-.define jpg_initptr			$98							; 32-bit pointer for buffer initialization
-.define jpg_outptr			$9c							; 32-bit desample destination pointer
+.define jpg_initptr				$98							; 32-bit pointer for buffer initialization
+.define jpg_outptr				$9c							; 32-bit desample destination pointer
 
-.define jpg_ypoint			$a0							; used in convert to rgb
-.define jpg_cbpoint			$a4
-.define jpg_crpoint			$a8
+.define jpg_ypoint				$a0							; used in convert to rgb
+.define jpg_cbpoint				$a4
+.define jpg_crpoint				$a8
 
-.define jpg_notjpg			1							; errors
-.define jpg_readerr			2
-.define jpg_badqt			3
-.define jpg_badht			4
-.define jpg_headerr			5
-.define jpg_hufferr			6
+.define jpg_notjpg				1							; errors
+.define jpg_readerr				2
+.define jpg_badqt				3
+.define jpg_badht				4
+.define jpg_headerr				5
+.define jpg_hufferr				6
 
-jpg_ybuf_ptr
-		.byte <.loword(jpg_ybuf), >.loword(jpg_ybuf), <.hiword(jpg_ybuf), >.hiword(jpg_ybuf)
-jpg_cbbuf_ptr
-		.byte <.loword(jpg_cbbuf), >.loword(jpg_cbbuf), <.hiword(jpg_cbbuf), >.hiword(jpg_cbbuf)
-jpg_crbuf_ptr
-		.byte <.loword(jpg_crbuf), >.loword(jpg_crbuf), <.hiword(jpg_crbuf), >.hiword(jpg_crbuf)
+jpg_ybuf_ptr					.byte <.loword(jpg_ybuf),  >.loword(jpg_ybuf),  <.hiword(jpg_ybuf),  >.hiword(jpg_ybuf)
+jpg_cbbuf_ptr					.byte <.loword(jpg_cbbuf), >.loword(jpg_cbbuf), <.hiword(jpg_cbbuf), >.hiword(jpg_cbbuf)
+jpg_crbuf_ptr					.byte <.loword(jpg_crbuf), >.loword(jpg_crbuf), <.hiword(jpg_crbuf), >.hiword(jpg_crbuf)
 
 jpg_process
 
@@ -1534,10 +1570,10 @@ jpg_idct
 		bcc :+
 		sta jpg_bitshi
 		lda jpg_bitslo
-		sbc #<jpg_a1216
+		sbc #<jpg_cos2ang
 		sta jpg_bitslo
 		lda jpg_bitshi
-		sbc #>jpg_a1216
+		sbc #>jpg_cos2ang
 :		sta jpg_f2+1
 		lda jpg_bitslo
 		sta jpg_f2+0
@@ -1556,10 +1592,10 @@ jpg_idct
 		bcc :+
 		sta jpg_bitshi
 		lda jpg_bitslo
-		sbc #<jpg_a3216
+		sbc #<jpg_cos2ang
 		sta jpg_bitslo
 		lda jpg_bitshi
-		sbc #>jpg_a3216
+		sbc #>jpg_cos2ang
 :		sta jpg_f1+1
 		lda jpg_bitslo
 		sta jpg_f1+0
@@ -1583,10 +1619,10 @@ jpg_idct
 		cpy #$80
 		bcc :+
 		lda jpg_bitslo
-		sbc #<jpg_a5216
+		sbc #<jpg_cos3ang
 		sta jpg_bitslo
 		lda jpg_bitshi
-		sbc #>jpg_a5216
+		sbc #>jpg_cos3ang
 		sta jpg_bitshi
 :		lda jpg_bitslo
 		eor #$ff
@@ -1612,10 +1648,10 @@ jpg_idct
 		bcc :+
 		sta jpg_bitshi
 		lda jpg_bitslo
-		sbc #<jpg_a2216
+		sbc #<jpg_cosangminuscos3ang
 		sta jpg_bitslo
 		lda jpg_bitshi
-		sbc #>jpg_a2216
+		sbc #>jpg_cosangminuscos3ang
 :		sta jpg_bitshi
 		lda jpg_t1+0
 		sec
@@ -1639,10 +1675,10 @@ jpg_idct
 		bcc :+
 		sta jpg_bitshi
 		lda jpg_bitslo
-		sbc #<jpg_a4216
+		sbc #<jpg_cosangpluscos3ang
 		sta jpg_bitslo
 		lda jpg_bitshi
-		sbc #>jpg_a4216
+		sbc #>jpg_cosangpluscos3ang
 :		sta jpg_bitshi
 		lda jpg_bitslo
 		clc
