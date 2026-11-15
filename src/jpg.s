@@ -359,7 +359,6 @@ jpg_marker_sos
 
 		jsr sof_get									; LV TODO - BETTER NAMING
 		sta jpg_temp								; # of components
-		sta jpg_ncomps
 :		jsr sof_get									; LV TODO - BETTER NAMING
 		sta jpg_temp+1								; component id    01 00     02 11     03 11
 		jsr sof_get									; LV TODO - BETTER NAMING
@@ -394,17 +393,11 @@ jpg_sos_readcomponents
 		ldy #>(jpg_ybuf)
 		jsr jpg_readdataunit
 
-		ldx jpg_ncomps
-		dex
-		beq jpg_sos_readdone
 		ldx #2										; read chroma
 		lda #<(jpg_cbbuf)
 		ldy #>(jpg_cbbuf)
 		jsr jpg_readdataunit
 
-		ldx jpg_ncomps
-		dex
-		beq jpg_sos_readdone
 		ldx #3										; read chroma
 		lda #<(jpg_crbuf)
 		ldy #>(jpg_crbuf)
@@ -677,7 +670,6 @@ jpg_height	.word 0
 jpg_width	.word 0
 jpg_numrows	.byte 0
 jpg_numcols	.byte 0
-jpg_ncomps	.byte 0									; num components
 jpg_csampv	.byte 0, 0, 0, 0, 0, 0					; sampling factors
 jpg_csamph	.byte 0, 0, 0, 0, 0, 0					; (horizontal)
 jpg_cquant	.byte 0, 0, 0, 0, 0, 0					; quantization table
@@ -735,7 +727,6 @@ sof_ok	jsr sof_get									; get height - $00e8
 		inc jpg_numcols								; 0..7 => 1 col, etc.
 
 		jsr sof_get									; get components - 3
-		sta jpg_ncomps
 		sta jpg_temp+0
 
 sof_loop
@@ -1969,25 +1960,7 @@ jpg_torgb
 		ldq jpg_crbuf_ptr
 		stq jpg_crpoint
 
-		ldx jpg_ncomps
-		dex
-		beq jpg_torgb_gray						; if grayscale, copy Y to Cb and Cr
 		ldz #$00
-		jmp jpg_torgb_loop
-jpg_torgb_gray
-		ldx #>(jpg_cbbuf-jpg_ybuf)
-		ldz #$00
-:		lda [jpg_ypoint],z
-		sta [jpg_cbpoint],z
-		sta [jpg_crpoint],z
-		inz
-		bne :-
-		inc jpg_ypoint+1
-		inc jpg_cbpoint+1
-		inc jpg_crpoint+1
-		dex
-		bne :-
-		rts
 
 jpg_torgb_loop
 		lda #00
