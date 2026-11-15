@@ -1,11 +1,7 @@
 
 ; https://web.archive.org/web/20120403212223/http://class.ee.iastate.edu/ee528/Reading%20material/JPEG_File_Format.pdf
 
-jpg_error				.byte 0
-jpg_eof					.byte 0
-jpg_skipff				.byte 0
-
-jpg_reslen				.word 0							; lame restart markers
+; ----------------------------------------------------------------------------------------------------------------------------------------
 
 ; ang = PI/8;
 ; a1 = cos(2 * ang)					= cos(0.250 * PI)					= 0.7071067811865 * 65536			= 46340.95001184158
@@ -117,6 +113,8 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_bufwidth			40							; was 40
 .define jpg_bufheight			2
 
+.define jpg_linelen				jpg_bufwidth*8
+
 .define jpg_channelbufsize		jpg_bufwidth*8*8*jpg_bufheight
 
 .define jpg_imgbufsize			3*jpg_channelbufsize
@@ -190,9 +188,81 @@ jpg_reslen				.word 0							; lame restart markers
 .define jpg_headerr				5
 .define jpg_hufferr				6
 
-jpg_ybuf_ptr					.byte <.loword(jpg_ybuf),  >.loword(jpg_ybuf),  <.hiword(jpg_ybuf),  >.hiword(jpg_ybuf)
-jpg_cbbuf_ptr					.byte <.loword(jpg_cbbuf), >.loword(jpg_cbbuf), <.hiword(jpg_cbbuf), >.hiword(jpg_cbbuf)
-jpg_crbuf_ptr					.byte <.loword(jpg_crbuf), >.loword(jpg_crbuf), <.hiword(jpg_crbuf), >.hiword(jpg_crbuf)
+; ----------------------------------------------------------------------------------------------------------------------------------------
+
+jpg_ybuf_ptr					.byte <.loword(jpg_ybuf),   >.loword(jpg_ybuf),   <.hiword(jpg_ybuf),   >.hiword(jpg_ybuf)
+jpg_cbbuf_ptr					.byte <.loword(jpg_cbbuf),  >.loword(jpg_cbbuf),  <.hiword(jpg_cbbuf),  >.hiword(jpg_cbbuf)
+jpg_crbuf_ptr					.byte <.loword(jpg_crbuf),  >.loword(jpg_crbuf),  <.hiword(jpg_crbuf),  >.hiword(jpg_crbuf)
+jpg_imgbuf_ptr					.byte <.loword(jpg_imgbuf), >.loword(jpg_imgbuf), <.hiword(jpg_imgbuf), >.hiword(jpg_imgbuf)
+
+jpg_error						.byte 0
+jpg_eof							.byte 0
+jpg_skipff						.byte 0
+
+jpg_header						.word 0							; hi, lo
+jpg_headerlength				.word 0							; lo, hi
+
+jpg_height						.word 0
+jpg_width						.word 0
+jpg_numrows						.byte 0
+jpg_numcols						.byte 0
+jpg_csampv						.byte 0, 0, 0, 0, 0, 0			; sampling factors
+jpg_csamph						.byte 0, 0, 0, 0, 0, 0			; (horizontal)
+jpg_cquant						.byte 0, 0, 0, 0, 0, 0			; quantization table
+
+jpg_nbits						.byte 0        					; # of bits left
+jpg_byte						.byte 0
+
+jpg_reslen						.word 0							; lame restart markers
+
+jpg_row							.byte 0
+jpg_rowoffset					.byte 0
+
+jpg_cres						.word 0
+
+jpg_huff_symbols				.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+jpg_hufflen						.byte 0
+
+jpg_buflen						.word jpg_bufwidth*8*8
+
+jpg_col							.byte 0
+jpg_coloff						.byte 0							; col offset
+
+jpg_dchuff0						.word 0							; addresses
+jpg_dchuff1						.word 0
+jpg_dchuff2						.word 0
+jpg_dchuff3						.word 0
+jpg_achuff0						.word 0
+jpg_achuff1						.word 0
+jpg_achuff2						.word 0
+jpg_achuff3						.word 0
+
+jpg_hufftop						.word 0										; end of huffman tree
+jpg_hufftx						.byte 0
+jpg_huffty						.byte 0
+
+jpg_huffbits					.word 0										; hi,lo
+jpg_huffval						.byte 0
+
+jpg_bitp						.byte $00									; bit patterns (masks)
+								.byte $01, $02, $04, $08, $10, $20, $40, $80
+								.byte $01, $02, $04, $08, $10, $20, $40, $80
+
+jpg_tmphuf						.byte 0
+jpg_achuff						.byte 0, 0, 0, 0, 0, 0					; ac table to use
+jpg_dchuff						.byte 0, 0, 0, 0, 0, 0					; dc table to use
+jpg_dclo						.byte 0, 0, 0, 0, 0, 0					; dc coeffs
+jpg_dchi						.byte 0, 0, 0, 0, 0, 0
+
+jpg_curcomp						.byte 0
+
+jpg_curbuf						.byte 0, 0, 0, 0
+jpg_rend						.byte 0
+;jpg_currow						.byte 0
+jpg_curcol						.byte 0
+jpg_rendflag					.byte 0
+
+; ----------------------------------------------------------------------------------------------------------------------------------------
 
 jpg_process
 
@@ -222,7 +292,11 @@ jpg_process
 		cmp #$d8
 		bne jpg_err1
 
-		jsr jpg_inithuff
+		lda #<jpg_huffmem							; jpg_inithuff
+		sta jpg_hufftop+0
+		lda #>jpg_huffmem
+		sta jpg_hufftop+1
+		
 		jsr jpg_initbuff
 
 		;UICORE_CALLELEMENTFUNCTION la1listbox, uilistbox_startaddentries
@@ -263,14 +337,9 @@ jpg_err1
 
 jpg_initbuff
 
-		lda #<.loword(jpg_imgbuf)
-		sta jpg_initptr+0
-		lda #>.loword(jpg_imgbuf)
-		sta jpg_initptr+1
-		lda #<.hiword(jpg_imgbuf)
-		sta jpg_initptr+2
-		lda #>.hiword(jpg_imgbuf)
-		sta jpg_initptr+3
+		ldq jpg_imgbuf_ptr
+		stq jpg_initptr
+
 		ldx #>(jpg_imgbufsize)
 		lda #$80
 		ldy #$00
@@ -306,9 +375,6 @@ jpg_getbyte
 		;stx jpg_eof
 		;cpx #64
 		rts											; C set -> error
-
-jpg_nbits	.byte 0           ;# of bits left
-jpg_byte	.byte 0
 
 jpg_getbit
 		dec jpg_nbits
@@ -371,21 +437,13 @@ jpg_domarker2
 		cmp #$da
 		bne jpg_marker_unknown
 
-jpg_jmpmarker_sos
-		jmp jpg_marker_sos
-jpg_jmpmarker_dri
-		jmp jpg_marker_dri
-jpg_jmpmarker_dqt
-		jmp jpg_marker_dqt
-jpg_jmpmarker_dht
-		jmp jpg_marker_dht
-jpg_jmpmarker_sof
-		jmp jpg_marker_sof
+jpg_jmpmarker_sos		jmp jpg_marker_sos
+jpg_jmpmarker_dri		jmp jpg_marker_dri
+jpg_jmpmarker_dqt		jmp jpg_marker_dqt
+jpg_jmpmarker_dht		jmp jpg_marker_dht
+jpg_jmpmarker_sof		jmp jpg_marker_sof
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpg_row		.byte 0
-jpg_rowoff	.byte 0				; row offset
 
 jpg_marker_sos
 		;UICORE_SETLISTBOXTEXT la1listbox, uitxt_marker_sos
@@ -470,7 +528,7 @@ jpg_sos_rend
 		sty jpg_temp+1
 
 		ldx jpg_row									; don't render anything if we haven't reached the start row yet
-		cpx jpg_rowoff
+		cpx jpg_rowoffset
 		bcc jpg_sos_norend
 
 		; -----------------------------
@@ -483,7 +541,7 @@ jpg_sos_norend
 		cmp jpg_numrows
 		bcs jpg_sos_done
 		sec
-		sbc jpg_rowoff
+		sbc jpg_rowoffset
 		bcc :+
 		cmp #25
 		bcs jpg_sos_done
@@ -507,9 +565,8 @@ jpg_sos_done
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpg_cres	.word 0
-
 jpg_marker_dri										; lame restart interval markers
+
 		;UICORE_SETLISTBOXTEXT la1listbox, uitxt_marker_dri
 
 		jsr sdc_getbyte
@@ -604,10 +661,6 @@ jpg_marker_dqt_end
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpg_huff_symbols	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-jpg_hufflen			.byte 0
-
-
 jpg_marker_dht
 		;UICORE_SETLISTBOXTEXT la1listbox, uitxt_marker_dht
 
@@ -636,7 +689,7 @@ dhtcont
 		tax
 
 dht_ok		
-		lda jpg_hufftop
+		lda jpg_hufftop+0
 		sta jpg_dchuff0,x
 		sta jpg_huff+0
 		lda jpg_hufftop+1
@@ -704,14 +757,6 @@ jpg_marker_dht_end
 		rts
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpg_height	.word 0
-jpg_width	.word 0
-jpg_numrows	.byte 0
-jpg_numcols	.byte 0
-jpg_csampv	.byte 0, 0, 0, 0, 0, 0					; sampling factors
-jpg_csamph	.byte 0, 0, 0, 0, 0, 0					; (horizontal)
-jpg_cquant	.byte 0, 0, 0, 0, 0, 0					; quantization table
 
 jpg_marker_sof
 		;UICORE_SETLISTBOXTEXT la1listbox, uitxt_marker_sof
@@ -853,9 +898,6 @@ jpg_decrease_headerlength
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpg_header			.word 0							; hi, lo
-jpg_headerlength	.word 0							; lo, hi
-
 ; getheader -- read in header bytes.
 ; on exit:
 ;   c set -> error
@@ -910,7 +952,7 @@ jpg_getheader_end
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
 ; huffman tree routines.
-;
+
 ; the huffman tree is implemented as a series of 2-byte nodes.
 ; left nodes are at huff+2
 ; right nodes are at (huff) if link < $8000.
@@ -918,34 +960,6 @@ jpg_getheader_end
 ; link   = $80xx means xx=leaf value,
 ; link   = $ffxx means no right link,
 ; link+2 = hufftop -> no left link.
-
-jpg_dchuff0		.word 0								; addresses
-jpg_dchuff1		.word 0
-jpg_dchuff2		.word 0
-jpg_dchuff3		.word 0
-jpg_achuff0		.word 0
-jpg_achuff1		.word 0
-jpg_achuff2		.word 0
-jpg_achuff3		.word 0
-
-jpg_hufftop		.word 0								; end of huffman tree
-jpg_hufftx		.byte 0
-jpg_huffty		.byte 0
-
-jpg_huffbits	.word 0								; hi,lo
-jpg_huffval		.byte 0
-
-jpg_bitp		.byte $00									; bit patterns (masks)
-				.byte $01, $02, $04,$08, $10, $20, $40, $80
-				.byte $01, $02, $04,$08, $10, $20, $40, $80
-
-jpg_inithuff
-
-		lda #<jpg_huffmem
-		sta jpg_hufftop+0
-		lda #>jpg_huffmem
-		sta jpg_hufftop+1
-		rts
 
 ; create new node; make current node point to it.
 ; on entry: .y = 0 -> right node, otherwise left node
@@ -956,7 +970,7 @@ jpg_newnode
 
 		tya
 		bne jpg_nnskip
-		lda jpg_hufftop
+		lda jpg_hufftop+0
 		sec
 		sbc jpg_huff+0
 		sta (jpg_huff),y							; point -> new node
@@ -966,11 +980,11 @@ jpg_newnode
 		sta (jpg_huff),y
 
 jpg_nnskip
-		lda jpg_hufftop
+		lda jpg_hufftop+0
 		sta jpg_point+0
 		clc
 		adc #2
-		sta jpg_hufftop
+		sta jpg_hufftop+0
 		lda jpg_hufftop+1
 		sta jpg_point+1
 		adc #00
@@ -1091,14 +1105,6 @@ jpg_decodedc
 ; ----------------------------------------------------------------
 
 ; decode AC coeffs
-
-jpg_tmphuf	.byte 0
-jpg_achuff	.byte 0, 0, 0, 0, 0, 0					; ac table to use
-jpg_dchuff	.byte 0, 0, 0, 0, 0, 0					; dc table to use
-jpg_dclo	.byte 0, 0, 0, 0, 0, 0					; dc coeffs
-jpg_dchi	.byte 0, 0, 0, 0, 0, 0
-
-jpg_curcomp	.byte 0
 
 jpg_decodeac
 		ldx jpg_curcomp								; set huffman
@@ -2113,8 +2119,6 @@ jpg_torgb_done
 ; desample -- expand dct square by sample factor and reorg data.
 ; on entry: dest = destination buffer
 
-jpg_linelen		.word jpg_bufwidth*8
-
 jpg_desample 
 
 		lda #00
@@ -2148,10 +2152,10 @@ jpg_desample_expand
 
 		clc											; next scanline
 		lda jpg_outptr+0
-		adc jpg_linelen+0
+		adc #<(jpg_linelen)
 		sta jpg_outptr+0
 		lda jpg_outptr+1
-		adc jpg_linelen+1
+		adc #>(jpg_linelen)
 		sta jpg_outptr+1
 		lda jpg_outptr+2
 		adc #$00
@@ -2192,10 +2196,10 @@ jpg_nodesample
 
 		clc											; next scanline
 		lda jpg_dest+0
-		adc jpg_linelen+0
+		adc #<(jpg_linelen)
 		sta jpg_dest+0
 		lda jpg_dest+1
-		adc jpg_linelen+1
+		adc #>(jpg_linelen)
 		sta jpg_dest+1
 
 		cpx #64
@@ -2226,23 +2230,23 @@ jpg_zigzag
 		.byte  116, 118, 104,  90,  76,  62,  78,  92
 		.byte  106, 120, 122, 108,  94, 110, 124, 126
 
-;   0  1  5  6 14 15 27 28
-;   2  4  7 13 16 26 29 42
-;   3  8 12 17 25 30 41 43
-;   9 11 18 24 31 40 44 53
-;  10 19 23 32 39 45 52 54
-;  20 22 33 38 46 51 55 60
-;  21 34 37 47 50 56 59 61
-;  35 36 48 49 57 58 62 63
+		;   0  1  5  6 14 15 27 28
+		;   2  4  7 13 16 26 29 42
+		;   3  8 12 17 25 30 41 43
+		;   9 11 18 24 31 40 44 53
+		;  10 19 23 32 39 45 52 54
+		;  20 22 33 38 46 51 55 60
+		;  21 34 37 47 50 56 59 61
+		;  35 36 48 49 57 58 62 63
 
-;  0  1  8 16  9  2  3 10
-; 17 24 32 25 18 11  4  5
-; 12 19 26 33 40 48 41 34
-; 27 20 13  6  7 14 21 28
-; 35 42 49 56 57 50 43 36
-; 29 22 15 23 30 37 44 51
-; 58 59 52 45 38 31 39 46
-; 53 60 61 54 47 55 62 63
+		;  0  1  8 16  9  2  3 10
+		; 17 24 32 25 18 11  4  5
+		; 12 19 26 33 40 48 41 34
+		; 27 20 13  6  7 14 21 28
+		; 35 42 49 56 57 50 43 36
+		; 29 22 15 23 30 37 44 51
+		; 58 59 52 45 38 31 39 46
+		; 53 60 61 54 47 55 62 63
 
 jpg_dequantize
 		ldx jpg_curcomp
@@ -2303,12 +2307,6 @@ jpg_dequantize_high
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-jpg_curbuf		.byte 0, 0, 0, 0
-jpg_rend		.byte 0
-;jpg_currow		.byte 0
-jpg_curcol		.byte 0
-jpg_rendflag	.byte 0
-
 jpg_fetch											; fetch the data
 		lda #00
 		sta jpg_dest+1
@@ -2365,11 +2363,6 @@ decode_error
 		jmp :-
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
-
-jpg_buflen		.word jpg_bufwidth*8*8
-
-jpg_col			.byte 0
-jpg_coloff		.byte 0								; col offset
 
 jpg_readdataunit
 		sta jpg_curbuf+0
