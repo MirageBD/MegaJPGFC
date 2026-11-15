@@ -294,8 +294,8 @@ jpg_render
 
 		JPGR_QCOPY jpg_render_rptr, jpg_render_gptr
 		JPGR_QCOPY jpg_render_rptr, jpg_render_bptr
-		JPGR_QADD jpg_render_gptr, jpg_render_addgreen
-		JPGR_QADD jpg_render_bptr, jpg_render_addblue
+		JPGR_QADD  jpg_render_gptr, jpg_render_addgreen
+		JPGR_QADD  jpg_render_bptr, jpg_render_addblue
 
 		lda #$08
 		sta jpg_render_rowcount

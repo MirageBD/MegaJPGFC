@@ -15,48 +15,66 @@
 .define jpg_cosangpluscos3ang	20091
 .define jpg_cos3ang				25080
 
-; f = { 10, 9.24, 7.07, 3.826, 0, -3.826, -7.07, -9.24 }
-; F = {  0,    0,    0,     0, 0,      0,     0,   256 }
-; S = {  0,    0,    0,     0, 0,      0,     0,   256 }
+								; f = { 10,   9.24, 7.07, 3.826,   0,   -3.826, -7.07, -9.24 }
+								; F = {  0,      0,    0,     0,   0,        0,     0,   256 }
+								; S = {  0,      0,    0,     0,   0,        0,     0,   256 }
 
-.define data1					$0400						; DATA1.BIN
-.define data2					$0a00						; DATA2.BIN
+.define data1					$0400													; DATA1.BIN
+.define data2					$0a00													; DATA2.BIN
 
-.define jpg_negmlo				data1+$0000					; mult tables - $0A00-$1000 DATA BLOCK!!! = $0600
-.define jpg_posmlo				data1+$0100					; 2 pages
-.define jpg_negmhi				data1+$0300
-.define jpg_posmhi				data1+$0400					; 2 pages
+								; data1.bin contains square lookup tables used to multiply a coefficient byte by a JPEG quantization value using the difference of squares:
+								; F(a+q) - F(a-q) = aq, F(x) = [x^2/4]
+								; Each 16-bit F(x) is split into low and high byte tables:
 
-.define jpg_a1lo				data2+$0000					; $0000				; cos(2a), a=pi/8
-.define jpg_a1hi				data2+$0100					; $0100
+								; During dequantization, the code sets the positive table pointer’s low byte to q, the quantization value, and the negative pointer’s low byte to -q.
+								; Indexing both with coefficient byte a looks up F(a+q) and F(a-q);
+								; subtracting the results gives a*q.
+								; The low and high tables together produce the 16-bit product.
 
-.define jpg_a2lo				data2+$0200					; $0200				; cos(a) - cos(3a)
-.define jpg_a2hi				data2+$0300					; $0300
+								; The “negative” tables provide the wrapped negative-index range; they aren’t tables of negative products.
 
-.define jpg_a3lo				jpg_a1lo					; cos(2a)
+; mult tables, $0600 bytes ---------------------------------------------------------------------------------------------------------------------
+
+.define jpg_negmlo				data1+$0000												; Low byte for negative-index lookups
+.define jpg_posmlo				data1+$0100												; Low byte for positive lookups; spans two pages
+.define jpg_negmhi				data1+$0300												; High byte for negative-index lookups
+.define jpg_posmhi				data1+$0400												; High byte for positive lookups; spans two pages
+
+; other tables, $1700 bytes ---------------------------------------------------------------------------------------------------------------------
+
+																						; a=pi/8
+.define jpg_a1lo				data2+$0000												; cos(2a)
+.define jpg_a1hi				data2+$0100
+
+.define jpg_a2lo				data2+$0200												; cos(a) - cos(3a)
+.define jpg_a2hi				data2+$0300
+
+.define jpg_a3lo				jpg_a1lo												; cos(2a)
 .define jpg_a3hi				jpg_a1hi
 
-.define jpg_a4lo				data2+$0400					; $0400				; cos(a) + cos(3a)
-.define jpg_a4hi				data2+$0500					; $0500
-.define jpg_a4gh				data2+$0600					; $0600
+.define jpg_a4lo				data2+$0400												; cos(a) + cos(3a)
+.define jpg_a4hi				data2+$0500
+.define jpg_a4gh				data2+$0600
 
-.define jpg_a5lo				data2+$0700					; $0700				; cos(3a)
-.define jpg_a5hi				data2+$0800					; $0800
+.define jpg_a5lo				data2+$0700												; cos(3a)
+.define jpg_a5hi				data2+$0800
 
-; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
-;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
-;        with
-;     f(0) = f(0) * 2 / sqrt(2) , which can be combined with the first step using the table for i=4.
+								; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
+								;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
+								;        with
+								;     f(0) = f(0) * 2 / sqrt(2) , which can be combined with the first step using the table for i=4.
 
-.define jpg_sec1				data2+$0900					; $0900
+.define jpg_sec1				data2+$0900												; $0900
 .define jpg_sec2				data2+$0b00
 .define jpg_sec3				data2+$0d00
 .define jpg_sec4				data2+$0f00
 .define jpg_sec5				data2+$1100
 .define jpg_sec6				data2+$1300
-.define jpg_sec7				data2+$1500					; ends $2100
+.define jpg_sec7				data2+$1500												; ends $2100
 
-.define jpg_crtab1				$8100						; YCBCC2RGB (YCbCc to RGB) table used for rgb conversion
+; YCbCc to RGB tables, $0200 bytes ---------------------------------------------------------------------------------------------------------------------
+
+.define jpg_crtab1				$8100													; YCBCC2RGB (YCbCc to RGB) table used for rgb conversion
 .define jpg_crtab2				$8180
 .define jpg_cbtab1				$8200
 .define jpg_cbtab2				$8280
@@ -72,7 +90,7 @@
 ; 5A 5B 5D 5E 5F 61 62 64 65 66 68 69 6B 6C 6D 6F
 ; 70 72 73 74 76 77 79 7A 7B 7D 7E 80 81 82 84 85
 ; 87 88 89 8B 8C 8E 8F 90 92 93 95 96 97 99 9A 9C
-; 9D 9E A0 A1 A3 A4 A5 A7 A8 AA AB AC AE AF B1 B2			; 1.402 * 128 = 179.456 = $B3 (close enough to $B2)
+; 9D 9E A0 A1 A3 A4 A5 A7 A8 AA AB AC AE AF B1 B2										; 1.402 * 128 = 179.456 = $B3 (close enough to $B2)
 
 ; 00 01 01 02 03 04 04 05 06 06 07 08 09 09 0A 0B
 ; 0B 0C 0D 0E 0E 0F 10 10 11 12 13 13 14 15 15 16
@@ -81,7 +99,7 @@
 ; 2E 2E 2F 30 31 31 32 33 33 34 35 36 36 37 38 38
 ; 39 3A 3B 3B 3C 3D 3D 3E 3F 40 40 41 42 42 43 44
 ; 45 45 46 47 47 48 49 4A 4A 4B 4C 4C 4D 4E 4F 4F
-; 50 51 51 52 53 54 54 55 56 56 57 58 59 59 5A 5B			; 0.714136 * 128 = 91.409408 = $5B
+; 50 51 51 52 53 54 54 55 56 56 57 58 59 59 5A 5B										; 0.714136 * 128 = 91.409408 = $5B
 
 ; 00 00 01 01 01 02 02 02 03 03 03 04 04 04 05 05
 ; 06 06 06 07 07 07 08 08 08 09 09 09 0A 0A 0A 0B
@@ -90,7 +108,7 @@
 ; 16 16 17 17 17 18 18 18 19 19 19 1A 1A 1A 1B 1B
 ; 1C 1C 1C 1D 1D 1D 1E 1E 1E 1F 1F 1F 20 20 20 21
 ; 21 21 22 22 22 23 23 23 24 24 24 25 25 26 26 26
-; 27 27 27 28 28 28 29 29 29 2A 2A 2A 2B 2B 2B 2C			; 0.344136 * 128 = 44.049408 = $2C
+; 27 27 27 28 28 28 29 29 29 2A 2A 2A 2B 2B 2B 2C										; 0.344136 * 128 = 44.049408 = $2C
 
 ; 00 02 04 05 07 09 0B 0C 0E 10 12 13 15 17 19 1B
 ; 1C 1E 20 22 23 25 27 29 2B 2C 2E 30 32 33 35 37
@@ -99,23 +117,28 @@
 ; 71 73 75 77 78 7A 7C 7E 80 81 83 85 87 88 8A 8C
 ; 8E 90 91 93 95 97 98 9A 9C 9E 9F A1 A3 A5 A7 A8
 ; AA AC AE AF B1 B3 B5 B7 B8 BA BC BE BF C1 C3 C5
-; C6 C8 CA CC CE CF D1 D3 D5 D6 D8 DA DC DE DF E1			; 1.772 * 128 = 226.816 = 227 = $E3 (close enough to $E1)
+; C6 C8 CA CC CE CF D1 D3 D5 D6 D8 DA DC DE DF E1										; 1.772 * 128 = 226.816 = 227 = $E3 (close enough to $E1)
 
-.define jpg_trans				$8300						; transform
+; defines ---------------------------------------------------------------------------------------------------------------------
 
-.define jpg_veclo				$8380						; vec to be quantized
-.define jpg_vechi				$83c0
+.define jpg_trans				$8300													; transform
 
-.define jpg_imgbuf				$58000						; 3 x 5,120-byte planes ($50000-$53bff)
+.define jpg_veclo				$8380													; vec to be quantized lo. $40 bytes
+.define jpg_vechi				$83c0													; vec to be quantized hi. $40 bytes
 
-.define jpg_huffmem				$c000						; huffman trees ($c000-$c570)
+.define jpg_imgbuf				$58000													; 3 x 5,120-byte planes ($50000-$53bff)
 
-.define jpg_bufwidth			40							; was 40
+.define jpg_huffmem				$c000													; huffman trees ($c000-$c570)
+
+.define jpg_bufwidth			40
 .define jpg_bufheight			2
 
 .define jpg_linelen				jpg_bufwidth*8
 
 .define jpg_channelbufsize		jpg_bufwidth*8*8*jpg_bufheight
+
+.define jpg_buflen				jpg_bufwidth*8*8
+
 
 .define jpg_imgbufsize			3*jpg_channelbufsize
 
@@ -123,16 +146,16 @@
 .define jpg_cbbuf				jpg_imgbuf+1*jpg_channelbufsize
 .define jpg_crbuf				jpg_imgbuf+2*jpg_channelbufsize
 
-.define jpg_qt0					$0340						; quantization tables
-.define jpg_qt1					jpg_qt0+64					; $0380
-.define jpg_qt2					jpg_qt0+128					; $03c0 - only use 3
+.define jpg_qt0					$0340													; quantization tables
+.define jpg_qt1					jpg_qt0+64												; $0380
+.define jpg_qt2					jpg_qt0+128												; $03c0 - only use 3
 
 .define jpg_point				$02
 .define jpg_dest				$04
-.define jpg_bitslo				$06							; and dequantize
+.define jpg_bitslo				$06														; and dequantize
 .define jpg_bitshi				$07
 
-.define jpg_mult1lo				$08							; multiplication tables
+.define jpg_mult1lo				$08														; multiplication tables
 .define jpg_mult1hi				$0c
 .define jpg_mult2lo				$10
 .define jpg_mult2hi				$14
@@ -147,41 +170,41 @@
 .define jpg_f6					jpg_dct+12
 .define jpg_f7					jpg_dct+14
 
-.define jpg_index				$28							; idct stuff
+.define jpg_index				$28														; idct stuff
 
 .define jpg_t1					$2a
 .define jpg_t2					$2c
 .define jpg_t3					$2e
 
-.define jpg_vsamp				$30							; desample, 1 byte
-.define jpg_hsamp				$31							; 1 byte
+.define jpg_vsamp				$30														; desample, 1 byte
+.define jpg_hsamp				$31														; 1 byte
 
-.define jpg_count				$32							; used by getbits, addnode and decodeac, 1 byte
-.define jpg_temp2				$33							; used for huffman nodes, 1 byte
-.define jpg_huff				$34							; huffman pointers, 2 bytes
-.define jpg_quantp				$36							; quant table, 2 bytes
-.define jpg_temp				$38							; 2 bytes
-.define jpg_yvalue				$3a							; cached luminance during RGB conversion
+.define jpg_count				$32														; used by getbits, addnode and decodeac, 1 byte
+.define jpg_temp2				$33														; used for huffman nodes, 1 byte
+.define jpg_huff				$34														; huffman pointers, 2 bytes
+.define jpg_quantp				$36														; quant table, 2 bytes
+.define jpg_temp				$38														; 2 bytes
+.define jpg_yvalue				$3a														; cached luminance during RGB conversion
 
 
-.define jpg_coeff				$40							; 8 coefficients
-.define jpg_c0					jpg_coeff+0					; check usage?
-.define jpg_c1					jpg_coeff+2					; check usage?
-.define jpg_c2					jpg_coeff+4					; check usage?
-.define jpg_c3					jpg_coeff+6					; check usage?
-.define jpg_c4					jpg_coeff+8					; check usage?
-.define jpg_c5					jpg_coeff+10				; check usage?
-.define jpg_c6					jpg_coeff+12				; check usage?
-.define jpg_c7					jpg_coeff+14				; check usage?
+.define jpg_coeff				$40														; 8 coefficients
+.define jpg_c0					jpg_coeff+0
+.define jpg_c1					jpg_coeff+2
+.define jpg_c2					jpg_coeff+4
+.define jpg_c3					jpg_coeff+6
+.define jpg_c4					jpg_coeff+8
+.define jpg_c5					jpg_coeff+10
+.define jpg_c6					jpg_coeff+12
+.define jpg_c7					jpg_coeff+14
 
-.define jpg_initptr				$98							; 32-bit pointer for buffer initialization
-.define jpg_outptr				$9c							; 32-bit desample destination pointer
+.define jpg_initptr				$98														; 32-bit pointer for buffer initialization
+.define jpg_outptr				$9c														; 32-bit desample destination pointer
 
-.define jpg_ypoint				$a0							; used in convert to rgb
+.define jpg_ypoint				$a0														; used in convert to rgb
 .define jpg_cbpoint				$a4
 .define jpg_crpoint				$a8
 
-.define jpg_notjpg				1							; errors
+.define jpg_notjpg				1														; errors
 .define jpg_readerr				2
 .define jpg_badqt				3
 .define jpg_badht				4
@@ -195,40 +218,81 @@ jpg_cbbuf_ptr					.byte <.loword(jpg_cbbuf),  >.loword(jpg_cbbuf),  <.hiword(jpg
 jpg_crbuf_ptr					.byte <.loword(jpg_crbuf),  >.loword(jpg_crbuf),  <.hiword(jpg_crbuf),  >.hiword(jpg_crbuf)
 jpg_imgbuf_ptr					.byte <.loword(jpg_imgbuf), >.loword(jpg_imgbuf), <.hiword(jpg_imgbuf), >.hiword(jpg_imgbuf)
 
-jpg_error						.byte 0
-jpg_eof							.byte 0
-jpg_skipff						.byte 0
+jpg_bitp						.byte $00												; bit patterns (masks)
+								.byte $01, $02, $04, $08, $10, $20, $40, $80
+								.byte $01, $02, $04, $08, $10, $20, $40, $80
 
-jpg_header						.word 0							; hi, lo
-jpg_headerlength				.word 0							; lo, hi
+jpg_huff_symbols				.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+jpg_hufflen						.byte 0
+
+jpg_tmphuf						.byte 0
+jpg_achuff						.byte 0, 0, 0, 0, 0, 0									; ac table to use
+jpg_dchuff						.byte 0, 0, 0, 0, 0, 0									; dc table to use
+jpg_dclo						.byte 0, 0, 0, 0, 0, 0									; dc coeffs
+jpg_dchi						.byte 0, 0, 0, 0, 0, 0
 
 jpg_height						.word 0
 jpg_width						.word 0
 jpg_numrows						.byte 0
 jpg_numcols						.byte 0
-jpg_csampv						.byte 0, 0, 0, 0, 0, 0			; sampling factors
-jpg_csamph						.byte 0, 0, 0, 0, 0, 0			; (horizontal)
-jpg_cquant						.byte 0, 0, 0, 0, 0, 0			; quantization table
+jpg_csampv						.byte 0, 0, 0, 0, 0, 0									; sampling factors
+jpg_csamph						.byte 0, 0, 0, 0, 0, 0									; (horizontal)
+jpg_cquant						.byte 0, 0, 0, 0, 0, 0									; quantization table
 
-jpg_nbits						.byte 0        					; # of bits left
+jpg_zigzag						.byte   0,   2,   16,  32,  18,   4,   6,  20			; table to un-zigzag coeffs
+								.byte  34,  48,   64,  50,  36,  22,   8,  10			; multiples of 2, since 2 byte result.
+								.byte  24,  38,   52,  66,  80,  96,  82,  68
+								.byte  54,  40,   26,  12,  14,  28,  42,  56
+								.byte  70,  84,   98, 112, 114, 100,  86,  72
+								.byte  58,  44,   30,  46,  60,  74,  88, 102
+								.byte  116, 118, 104,  90,  76,  62,  78,  92
+								.byte  106, 120, 122, 108,  94, 110, 124, 126
+
+								;   0  1  5  6 14 15 27 28
+								;   2  4  7 13 16 26 29 42
+								;   3  8 12 17 25 30 41 43
+								;   9 11 18 24 31 40 44 53
+								;  10 19 23 32 39 45 52 54
+								;  20 22 33 38 46 51 55 60
+								;  21 34 37 47 50 56 59 61
+								;  35 36 48 49 57 58 62 63
+
+								;  0  1  8 16  9  2  3 10
+								; 17 24 32 25 18 11  4  5
+								; 12 19 26 33 40 48 41 34
+								; 27 20 13  6  7 14 21 28
+								; 35 42 49 56 57 50 43 36
+								; 29 22 15 23 30 37 44 51
+								; 58 59 52 45 38 31 39 46
+								; 53 60 61 54 47 55 62 63
+
+jpg_curbuf						.byte 0, 0, 0, 0
+
+jpg_quanttab					.word jpg_qt0
+								.word jpg_qt1
+								.word jpg_qt2
+
+jpg_error						.byte 0
+jpg_eof							.byte 0
+jpg_skipff						.byte 0
+
+jpg_header						.word 0													; hi, lo
+jpg_headerlength				.word 0													; lo, hi
+
+jpg_nbits						.byte 0        											; # of bits left
 jpg_byte						.byte 0
 
-jpg_reslen						.word 0							; lame restart markers
+jpg_reslen						.word 0													; lame restart markers
 
 jpg_row							.byte 0
 jpg_rowoffset					.byte 0
 
 jpg_cres						.word 0
 
-jpg_huff_symbols				.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-jpg_hufflen						.byte 0
-
-jpg_buflen						.word jpg_bufwidth*8*8
-
 jpg_col							.byte 0
-jpg_coloff						.byte 0							; col offset
+jpg_coloff						.byte 0													; col offset
 
-jpg_dchuff0						.word 0							; addresses
+jpg_dchuff0						.word 0													; addresses
 jpg_dchuff1						.word 0
 jpg_dchuff2						.word 0
 jpg_dchuff3						.word 0
@@ -237,26 +301,15 @@ jpg_achuff1						.word 0
 jpg_achuff2						.word 0
 jpg_achuff3						.word 0
 
-jpg_hufftop						.word 0										; end of huffman tree
+jpg_hufftop						.word 0													; end of huffman tree
 jpg_hufftx						.byte 0
 jpg_huffty						.byte 0
 
-jpg_huffbits					.word 0										; hi,lo
+jpg_huffbits					.word 0													; hi, lo
 jpg_huffval						.byte 0
-
-jpg_bitp						.byte $00									; bit patterns (masks)
-								.byte $01, $02, $04, $08, $10, $20, $40, $80
-								.byte $01, $02, $04, $08, $10, $20, $40, $80
-
-jpg_tmphuf						.byte 0
-jpg_achuff						.byte 0, 0, 0, 0, 0, 0					; ac table to use
-jpg_dchuff						.byte 0, 0, 0, 0, 0, 0					; dc table to use
-jpg_dclo						.byte 0, 0, 0, 0, 0, 0					; dc coeffs
-jpg_dchi						.byte 0, 0, 0, 0, 0, 0
 
 jpg_curcomp						.byte 0
 
-jpg_curbuf						.byte 0, 0, 0, 0
 jpg_rend						.byte 0
 ;jpg_currow						.byte 0
 jpg_curcol						.byte 0
@@ -548,10 +601,10 @@ jpg_sos_norend
 
 :		lda jpg_temp								; next buffer (i.e. render second char row if vertical sampling is 2)
 		clc
-		adc jpg_buflen+0
+		adc #<(jpg_buflen)
 		sta jpg_temp+0
 		lda jpg_temp+1
-		adc jpg_buflen+1
+		adc #>(jpg_buflen)
 		tay
 		lda jpg_temp
 		dec jpg_temp2
@@ -1255,44 +1308,6 @@ jpg_getbits_zero
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
-; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
-;
-; specifically,
-;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
-;        with
-;     f(0) = f(0) * 2 / sqrt(2), which can be combined with the first step using the table for i=4.
-;
-; these multipliers can in part be incorporated in the quantization table, but for now they're out in the open.
-
-jpg_prepdat
-
-		.macro PREPDAT sec, f
-			ldx #00
-			lda #<(sec)
-			sta jpg_point+0
-			lda #>(sec)
-			sta jpg_point+1
-			lda f+0
-			sta jpg_bitslo
-			lda f+1
-			jsr jpg_pmult
-			
-			sta f+1
-			lda jpg_bitslo
-			sta f+0
-		.endmacro
-
-		PREPDAT jpg_sec4, jpg_f0
-		PREPDAT jpg_sec1, jpg_f1
-		PREPDAT jpg_sec2, jpg_f2
-		PREPDAT jpg_sec3, jpg_f3
-		PREPDAT jpg_sec4, jpg_f4
-		PREPDAT jpg_sec5, jpg_f5
-		PREPDAT jpg_sec6, jpg_f6
-		PREPDAT jpg_sec7, jpg_f7
-
-		rts
-
 jpg_pmult											; exit .a = bitshi
 		bmi jpg_pmult_neg
 		beq :++
@@ -1455,7 +1470,39 @@ jpg_pmult_neg
 */
 
 jpg_idct
-		jsr jpg_prepdat								; shift and such
+		; since the algorithm is really an FFT converted into a DCT, the coefficients need a little massaging before tranformation.
+		;
+		; specifically,
+		;     f(i) = s(i) / (2cos(i * pi / 16))      i = 0..7
+		;        with
+		;     f(0) = f(0) * 2 / sqrt(2), which can be combined with the first step using the table for i=4.
+		;
+		; these multipliers can in part be incorporated in the quantization table, but for now they're out in the open.
+
+		.macro PREPDAT sec, f
+			ldx #00
+			lda #<(sec)
+			sta jpg_point+0
+			lda #>(sec)
+			sta jpg_point+1
+			lda f+0
+			sta jpg_bitslo
+			lda f+1
+			jsr jpg_pmult
+			
+			sta f+1
+			lda jpg_bitslo
+			sta f+0
+		.endmacro
+
+		PREPDAT jpg_sec4, jpg_f0
+		PREPDAT jpg_sec1, jpg_f1
+		PREPDAT jpg_sec2, jpg_f2
+		PREPDAT jpg_sec3, jpg_f3
+		PREPDAT jpg_sec4, jpg_f4
+		PREPDAT jpg_sec5, jpg_f5
+		PREPDAT jpg_sec6, jpg_f6
+		PREPDAT jpg_sec7, jpg_f7
 
 ; stage 1: f(5) <- f(5) - f(3)
 ;          f(1) <- f(1) + f(7)
@@ -1556,10 +1603,10 @@ jpg_idct
 		lda jpg_t1+1
 		sta jpg_f1+1
 
-; stage 3: f(2) <- a1*f(2)
+; stage 3: f(2) <-  a1*f(2)
 ;          f(5) <- -a2*f(5) + t1
-;          f(1) <- a3*f(1)
-;          f(7) <- a4*f(7) + t1
+;          f(1) <-  a3*f(1)
+;          f(7) <-  a4*f(7) + t1
 ; where t1 = -a5*(f(5) + f(7))
 
 ; f(2) <- a1*f(2)
@@ -1729,13 +1776,13 @@ jpg_idct
 		sta jpg_f6+1
 
 ; stage 5:
-;   f(0) <- f(0) + f(6)
-;   f(4) <- f(2) + f(4)
-;   f(2) <- f(4) - f(2)
-;   f(6) <- f(0) - f(6)
-;   f(3) <- f(3) + f(7)
-;   f(7) <- f(7) + f(1)
-;   f(1) <- f(1) - f(5)
+;   f(0) <-  f(0) + f(6)
+;   f(4) <-  f(2) + f(4)
+;   f(2) <-  f(4) - f(2)
+;   f(6) <-  f(0) - f(6)
+;   f(3) <-  f(3) + f(7)
+;   f(7) <-  f(7) + f(1)
+;   f(1) <-  f(1) - f(5)
 ;   f(5) <- -f(5)
 
 		lda jpg_f0+0
@@ -2215,39 +2262,6 @@ jpg_nodesample
 ; mult is 16 bit signed x 8 bit unsigned with 16-bit result, so sign etc. are taken care of automatically.
 ; result -> trans
 
-jpg_quanttab
-		.word jpg_qt0
-		.word jpg_qt1
-		.word jpg_qt2
-
-jpg_zigzag
-		.byte   0,   2,   16,  32,  18,   4,   6,  20		; table to un-zigzag coeffs
-		.byte  34,  48,   64,  50,  36,  22,   8,  10		; multiples of 2, since 2 byte result.
-		.byte  24,  38,   52,  66,  80,  96,  82,  68
-		.byte  54,  40,   26,  12,  14,  28,  42,  56
-		.byte  70,  84,   98, 112, 114, 100,  86,  72
-		.byte  58,  44,   30,  46,  60,  74,  88, 102
-		.byte  116, 118, 104,  90,  76,  62,  78,  92
-		.byte  106, 120, 122, 108,  94, 110, 124, 126
-
-		;   0  1  5  6 14 15 27 28
-		;   2  4  7 13 16 26 29 42
-		;   3  8 12 17 25 30 41 43
-		;   9 11 18 24 31 40 44 53
-		;  10 19 23 32 39 45 52 54
-		;  20 22 33 38 46 51 55 60
-		;  21 34 37 47 50 56 59 61
-		;  35 36 48 49 57 58 62 63
-
-		;  0  1  8 16  9  2  3 10
-		; 17 24 32 25 18 11  4  5
-		; 12 19 26 33 40 48 41 34
-		; 27 20 13  6  7 14 21 28
-		; 35 42 49 56 57 50 43 36
-		; 29 22 15 23 30 37 44 51
-		; 58 59 52 45 38 31 39 46
-		; 53 60 61 54 47 55 62 63
-
 jpg_dequantize
 		ldx jpg_curcomp
 		lda jpg_cquant,x
@@ -2424,10 +2438,10 @@ jpg_readdataunit_loopx
 jpg_readdataunit_nextrow
 		clc
 		lda jpg_curbuf+0
-		adc jpg_buflen+0
+		adc #<(jpg_buflen)
 		sta jpg_curbuf+0
 		lda jpg_curbuf+1
-		adc jpg_buflen+1
+		adc #>(jpg_buflen)
 		sta jpg_curbuf+1
 		dex
 		bne jpg_readdataunit_nextrow
