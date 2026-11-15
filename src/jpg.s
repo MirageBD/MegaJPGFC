@@ -1972,7 +1972,10 @@ jpg_torgb
 		ldy #00
 		ldx jpg_ncomps
 		dex
-		bne jpg_torgb_loop								; if grayscale, copy Y to Cb and Cr
+		beq jpg_torgb_gray						; if grayscale, copy Y to Cb and Cr
+		ldz #$00
+		jmp jpg_torgb_loop
+jpg_torgb_gray
 		ldx #>(jpg_cbbuf-jpg_ybuf)
 		ldz #$00
 :		lda [jpg_ypoint],z
@@ -1991,8 +1994,6 @@ jpg_torgb
 jpg_torgb_loop
 		lda #00
 		sta jpg_temp+1
-		tya
-		taz
 		lda [jpg_ypoint],z
 		sta jpg_yvalue
 		lda [jpg_cbpoint],z
@@ -2085,7 +2086,7 @@ jpg_torgb_done
 		sta [jpg_ypoint],z							; red
 		lda jpg_temp2
 		sta [jpg_crpoint],z							; blue
-		iny
+		inz
 		beq :++
 :		jmp jpg_torgb_loop
 
