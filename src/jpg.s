@@ -11,6 +11,11 @@
 								; F = {  0,      0,    0,     0,   0,        0,     0,   256 }
 								; S = {  0,      0,    0,     0,   0,        0,     0,   256 }
 
+.define jpg_quantisation_tables	$0340													; quantization tables
+.define jpg_qt0					jpg_quantisation_tables+0
+.define jpg_qt1					jpg_quantisation_tables+64
+.define jpg_qt2					jpg_quantisation_tables+128
+
 .define data1					$0400		; DATA1.BIN, $0600 bytes
 .define data2					$0a00		; DATA2.BIN, $1700 bytes
 
@@ -82,20 +87,13 @@
 .define jpg_bufheight			2
 
 .define jpg_linelen				jpg_bufwidth*8
-
-.define jpg_channelbufsize		jpg_bufwidth*8*8*jpg_bufheight
-
 .define jpg_buflen				jpg_bufwidth*8*8
-
+.define jpg_channelbufsize		jpg_bufwidth*8*8*jpg_bufheight
 .define jpg_imgbufsize			3*jpg_channelbufsize
 
 .define jpg_ybuf				jpg_imgbuf+0*jpg_channelbufsize
 .define jpg_cbbuf				jpg_imgbuf+1*jpg_channelbufsize
 .define jpg_crbuf				jpg_imgbuf+2*jpg_channelbufsize
-
-.define jpg_qt0					$0340													; quantization tables
-.define jpg_qt1					jpg_qt0+64												; $0380
-.define jpg_qt2					jpg_qt0+128												; $03c0 - only use 3
 
 .define jpg_point				$02
 .define jpg_dest				$04
@@ -103,19 +101,19 @@
 .define jpg_bitshi				$07
 
 .define jpg_mult1lo				$08														; multiplication tables
-.define jpg_mult1hi				$0c
-.define jpg_mult2lo				$10
-.define jpg_mult2hi				$14
+.define jpg_mult1hi				$0a
+.define jpg_mult2lo				$0c
+.define jpg_mult2hi				$0e
 
-.define jpg_dct					$16
-.define jpg_f0					jpg_dct+0												; $16
-.define jpg_f1					jpg_dct+2												; $18
-.define jpg_f2					jpg_dct+4												; $1a
-.define jpg_f3					jpg_dct+6												; $1c
-.define jpg_f4					jpg_dct+8												; $1e
-.define jpg_f5					jpg_dct+10												; $20
-.define jpg_f6					jpg_dct+12												; $22
-.define jpg_f7					jpg_dct+14												; $24
+.define jpg_dct					$10
+.define jpg_f0					jpg_dct+0												; $10
+.define jpg_f1					jpg_dct+2												; $12
+.define jpg_f2					jpg_dct+4												; $14
+.define jpg_f3					jpg_dct+6												; $16
+.define jpg_f4					jpg_dct+8												; $18
+.define jpg_f5					jpg_dct+10												; $1a
+.define jpg_f6					jpg_dct+12												; $1c
+.define jpg_f7					jpg_dct+14												; $1e
 
 .define jpg_index				$28														; idct stuff
 
@@ -693,7 +691,7 @@ dqt_loop
 		jsr jpg_getbyte
 		bcs jpg_marker_dqt_err
 		ldy jpg_temp
-		sta (jpg_point),y
+		sta (jpg_point+0),y
 		jsr jpg_decrease_headerlength
 
 		iny
@@ -1041,7 +1039,7 @@ jpg_nnskip
 
 		ldy #01
 		lda #$ff
-		sta (jpg_point),y							; init new node
+		sta (jpg_point+0),y							; init new node
 
 		ldx jpg_hufftx
 		ldy jpg_huffty
@@ -1323,10 +1321,10 @@ jpg_pmult_zero
 		adc jpg_point+1
 		sta jpg_point+1
 		ldy #00
-		lda (jpg_point),y
+		lda (jpg_point+0),y
 		sta jpg_bitslo
 		iny
-		lda (jpg_point),y
+		lda (jpg_point+0),y
 		dex
 		bmi :++
 :		asl jpg_bitslo
@@ -1359,10 +1357,10 @@ jpg_pmult_neg
 		adc jpg_point+1
 		sta jpg_point+1
 		ldy #00
-		lda (jpg_point),y
+		lda (jpg_point+0),y
 		sta jpg_bitslo
 		iny
-		lda (jpg_point),y
+		lda (jpg_point+0),y
 		dex
 		bmi :++
 :		asl jpg_bitslo
@@ -2288,19 +2286,19 @@ jpg_dequantize_loop
 		sty jpg_bitshi
 		beq jpg_dequantize_high
 
-:		lda (jpg_mult1lo),y
+:		lda (jpg_mult1lo+0),y
 		sec
-		sbc (jpg_mult2lo),y
+		sbc (jpg_mult2lo+0),y
 		sta jpg_bitslo
-		lda (jpg_mult1hi),y
-		sbc (jpg_mult2hi),y
+		lda (jpg_mult1hi+0),y
+		sbc (jpg_mult2hi+0),y
 		sta jpg_bitshi
 
 jpg_dequantize_high
 		ldy jpg_vechi,x
-		lda (jpg_mult1lo),y
+		lda (jpg_mult1lo+0),y
 		sec
-		sbc (jpg_mult2lo),y
+		sbc (jpg_mult2lo+0),y
 		clc
 		adc jpg_bitshi
 
