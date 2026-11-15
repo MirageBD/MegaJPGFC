@@ -95,31 +95,40 @@
 .define jpg_cbbuf				jpg_imgbuf+1*jpg_channelbufsize
 .define jpg_crbuf				jpg_imgbuf+2*jpg_channelbufsize
 
-.define jpg_point				$02
-.define jpg_dest				$04
-.define jpg_bitslo				$06														; and dequantize
-.define jpg_bitshi				$07
+.define jpg_notjpg				1														; errors
+.define jpg_readerr				2
+.define jpg_badqt				3
+.define jpg_badht				4
+.define jpg_headerr				5
+.define jpg_hufferr				6
 
-.define jpg_mult1lo				$08														; multiplication tables
-.define jpg_mult1hi				$0a
-.define jpg_mult2lo				$0c
-.define jpg_mult2hi				$0e
+; ZP defines ---------------------------------------------------------------------------------------------------------------------
+
+.define jpg_point				$02														; 2 bytes, indexed
+.define jpg_dest				$04														; 2 bytes
+.define jpg_bitslo				$06														; 1 byte
+.define jpg_bitshi				$07														; 1 byte
+
+.define jpg_mult1lo_ptr			$08														; 2 bytes, multiplication tables
+.define jpg_mult1hi_ptr			$0a														; 2 bytes
+.define jpg_mult2lo_ptr			$0c														; 2 bytes
+.define jpg_mult2hi_ptr			$0e														; 2 bytes
 
 .define jpg_dct					$10
-.define jpg_f0					jpg_dct+0												; $10
-.define jpg_f1					jpg_dct+2												; $12
-.define jpg_f2					jpg_dct+4												; $14
-.define jpg_f3					jpg_dct+6												; $16
-.define jpg_f4					jpg_dct+8												; $18
-.define jpg_f5					jpg_dct+10												; $1a
-.define jpg_f6					jpg_dct+12												; $1c
-.define jpg_f7					jpg_dct+14												; $1e
+.define jpg_f0					jpg_dct+0												; $10 ; 2 bytes
+.define jpg_f1					jpg_dct+2												; $12 ; 2 bytes
+.define jpg_f2					jpg_dct+4												; $14 ; 2 bytes
+.define jpg_f3					jpg_dct+6												; $16 ; 2 bytes
+.define jpg_f4					jpg_dct+8												; $18 ; 2 bytes
+.define jpg_f5					jpg_dct+10												; $1a ; 2 bytes
+.define jpg_f6					jpg_dct+12												; $1c ; 2 bytes
+.define jpg_f7					jpg_dct+14												; $1e ; 2 bytes
 
-.define jpg_index				$28														; idct stuff
+.define jpg_index				$20														; idct stuff, 1 byte
 
-.define jpg_t1					$2a
-.define jpg_t2					$2c
-.define jpg_t3					$2e
+.define jpg_t1					$22														; temp values. 2 bytes
+.define jpg_t2					$24														; 2 bytes
+.define jpg_t3					$26														; 2 bytes
 
 .define jpg_vsamp				$30														; desample, 1 byte
 .define jpg_hsamp				$31														; 1 byte
@@ -147,13 +156,6 @@
 .define jpg_ypoint				$a0														; used in convert to rgb
 .define jpg_cbpoint				$a4
 .define jpg_crpoint				$a8
-
-.define jpg_notjpg				1														; errors
-.define jpg_readerr				2
-.define jpg_badqt				3
-.define jpg_badht				4
-.define jpg_headerr				5
-.define jpg_hufferr				6
 
 ; ----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -322,13 +324,13 @@ jpg_process
 		sta jpg_reslen+1
 
 		lda #>(jpg_posmlo)
-		sta jpg_mult1lo+1
+		sta jpg_mult1lo_ptr+1
 		lda #>(jpg_negmlo)
-		sta jpg_mult2lo+1
+		sta jpg_mult2lo_ptr+1
 		lda #>(jpg_posmhi)
-		sta jpg_mult1hi+1
+		sta jpg_mult1hi_ptr+1
 		lda #>(jpg_negmhi)
-		sta jpg_mult2hi+1
+		sta jpg_mult2hi_ptr+1
 
 		jsr sdc_getbyte								; check jpeg soi
 		cmp #$ff									; marker = $ffd8
@@ -2272,13 +2274,13 @@ jpg_dequantize_loop
 		txa
 		tay
 		lda (jpg_quantp),y
-		sta jpg_mult1lo+0
-		sta jpg_mult1hi+0
+		sta jpg_mult1lo_ptr+0
+		sta jpg_mult1hi_ptr+0
 		eor #$ff
 		clc
 		adc #1
-		sta jpg_mult2lo+0
-		sta jpg_mult2hi+0
+		sta jpg_mult2lo_ptr+0
+		sta jpg_mult2hi_ptr+0
 
 		ldy jpg_veclo,x
 		bne :+
@@ -2286,19 +2288,19 @@ jpg_dequantize_loop
 		sty jpg_bitshi
 		beq jpg_dequantize_high
 
-:		lda (jpg_mult1lo+0),y
+:		lda (jpg_mult1lo_ptr+0),y
 		sec
-		sbc (jpg_mult2lo+0),y
+		sbc (jpg_mult2lo_ptr+0),y
 		sta jpg_bitslo
-		lda (jpg_mult1hi+0),y
-		sbc (jpg_mult2hi+0),y
+		lda (jpg_mult1hi_ptr+0),y
+		sbc (jpg_mult2hi_ptr+0),y
 		sta jpg_bitshi
 
 jpg_dequantize_high
 		ldy jpg_vechi,x
-		lda (jpg_mult1lo+0),y
+		lda (jpg_mult1lo_ptr+0),y
 		sec
-		sbc (jpg_mult2lo+0),y
+		sbc (jpg_mult2lo_ptr+0),y
 		clc
 		adc jpg_bitshi
 
